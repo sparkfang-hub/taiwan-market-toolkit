@@ -2,7 +2,7 @@
 
 Thanks for considering a contribution to Taiwan Market Toolkit.
 
-Please read `CODE_OF_CONDUCT.md` before participating. For design boundaries and module responsibilities, see `docs/ARCHITECTURE.md`. Maintainers use the triage, source-incident, dependency, and release process documented in `docs/maintaining.md`.
+Please read `CODE_OF_CONDUCT.md` before participating. For design boundaries and module responsibilities, see `docs/architecture.md`. Maintainers use the triage, source-incident, dependency, and release process documented in `docs/maintaining.md`.
 
 ## Development setup
 
