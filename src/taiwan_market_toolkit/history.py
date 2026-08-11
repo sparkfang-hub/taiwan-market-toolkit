@@ -1,11 +1,11 @@
 """Official historical daily-price adapters for Taiwan common equities.
 
-The TWSE and TPEx public historical pages expose one month per request.  This
+The TWSE and TPEx public historical pages expose one month per request. This
 module keeps network fetching separate from parsing, normalizes both sources
 into one read-only model, and applies conservative pacing/retry behavior.
 
 The first version intentionally targets ordinary four-digit common-equity
-symbols.  Exchange-traded products can use different trading-unit conventions
+symbols. Exchange-traded products can use different trading-unit conventions
 and should not be silently coerced into share-volume semantics.
 """
 
@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 
+from .history_cache import HistoricalPayloadCache
 from .symbols import Market, normalize_symbol
 from .validation import OHLCVRow
 
@@ -185,7 +186,7 @@ def parse_tpex_history(payload: str | bytes, code: str) -> list[HistoricalPrice]
     """Parse one TPEx monthly tradingStock JSON response.
 
     TPEx labels common-stock quantities as trading lots and trade value in
-    thousands of TWD.  For the four-digit common-equity scope of this adapter,
+    thousands of TWD. For the four-digit common-equity scope of this adapter,
     those are normalized to shares and TWD by multiplying each by 1,000.
     """
     _ensure_equity_code(code)
@@ -260,7 +261,7 @@ def _month_starts(start: date, end: date) -> Iterator[date]:
             current = date(current.year, current.month + 1, 1)
 
 
-def _fetch_text(url: str, *, timeout: float) -> str:
+def _fetch_bytes(url: str, *, timeout: float) -> bytes:
     request = urllib.request.Request(
         url,
         headers={
@@ -272,7 +273,33 @@ def _fetch_text(url: str, *, timeout: float) -> str:
         },
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
-        return response.read().decode("utf-8-sig")
+        return response.read()
+
+
+def fetch_twse_history_payload(code: str, month: date, *, timeout: float = 10.0) -> bytes:
+    """Fetch exact official TWSE monthly response bytes without parsing them."""
+    _ensure_equity_code(code)
+    query = urllib.parse.urlencode(
+        {
+            "response": "json",
+            "date": month.strftime("%Y%m01"),
+            "stockNo": code,
+        }
+    )
+    return _fetch_bytes(f"{TWSE_HISTORY_URL}?{query}", timeout=timeout)
+
+
+def fetch_tpex_history_payload(code: str, month: date, *, timeout: float = 10.0) -> bytes:
+    """Fetch exact official TPEx monthly response bytes without parsing them."""
+    _ensure_equity_code(code)
+    query = urllib.parse.urlencode(
+        {
+            "date": month.strftime("%Y/%m/01"),
+            "code": code,
+            "response": "json",
+        }
+    )
+    return _fetch_bytes(f"{TPEX_HISTORY_URL}?{query}", timeout=timeout)
 
 
 def fetch_twse_history_month(
@@ -282,15 +309,7 @@ def fetch_twse_history_month(
     timeout: float = 10.0,
 ) -> list[HistoricalPrice]:
     """Fetch one calendar month of official TWSE daily prices."""
-    _ensure_equity_code(code)
-    query = urllib.parse.urlencode(
-        {
-            "response": "json",
-            "date": month.strftime("%Y%m01"),
-            "stockNo": code,
-        }
-    )
-    return parse_twse_history(_fetch_text(f"{TWSE_HISTORY_URL}?{query}", timeout=timeout), code)
+    return parse_twse_history(fetch_twse_history_payload(code, month, timeout=timeout), code)
 
 
 def fetch_tpex_history_month(
@@ -300,15 +319,43 @@ def fetch_tpex_history_month(
     timeout: float = 10.0,
 ) -> list[HistoricalPrice]:
     """Fetch one calendar month of official TPEx daily prices."""
-    _ensure_equity_code(code)
-    query = urllib.parse.urlencode(
-        {
-            "date": month.strftime("%Y/%m/01"),
-            "code": code,
-            "response": "json",
-        }
+    return parse_tpex_history(fetch_tpex_history_payload(code, month, timeout=timeout), code)
+
+
+def _cached_month(
+    market: Market,
+    code: str,
+    month: date,
+    *,
+    timeout: float,
+    cache: HistoricalPayloadCache,
+    refresh: bool,
+    today: date,
+) -> list[HistoricalPrice]:
+    current_month = date(today.year, today.month, 1)
+    stable_month = month < current_month
+
+    if stable_month and not refresh:
+        cached = cache.read(market, code, month)
+        if cached is not None:
+            parser = parse_twse_history if market is Market.TWSE else parse_tpex_history
+            return parser(cached, code)
+
+    if market is Market.TWSE:
+        payload = fetch_twse_history_payload(code, month, timeout=timeout)
+        parsed = parse_twse_history(payload, code)
+    else:
+        payload = fetch_tpex_history_payload(code, month, timeout=timeout)
+        parsed = parse_tpex_history(payload, code)
+
+    cache.write(
+        market,
+        code,
+        month,
+        payload,
+        replace=refresh or not stable_month,
     )
-    return parse_tpex_history(_fetch_text(f"{TPEX_HISTORY_URL}?{query}", timeout=timeout), code)
+    return parsed
 
 
 def fetch_price_history(
@@ -322,12 +369,15 @@ def fetch_price_history(
     max_retries: int = 2,
     retry_backoff: float = 0.75,
     max_months: int = 120,
+    cache_dir: str | Path | None = None,
+    refresh: bool = False,
 ) -> list[HistoricalPrice]:
     """Fetch a date range from the appropriate official exchange source.
 
-    Requests are monthly, paced, retried only for transport/temporary JSON
-    failures, and capped by ``max_months`` to avoid accidentally hammering a
-    public exchange endpoint.
+    Requests are monthly, paced, retried for transport/parser failures, and
+    capped by ``max_months``. When ``cache_dir`` is supplied, exact response
+    bytes for completed months are reused locally. The current month is always
+    refreshed because its official response is still changing.
     """
     if end < start:
         raise ValueError("end must be on or after start")
@@ -351,6 +401,8 @@ def fetch_price_history(
             f"requested range spans {len(months)} months; max_months is {max_months}"
         )
 
+    cache = HistoricalPayloadCache(cache_dir) if cache_dir is not None else None
+    today = date.today()
     if symbol.market is Market.TWSE:
         fetch_month = fetch_twse_history_month
     else:
@@ -361,12 +413,24 @@ def fetch_price_history(
         last_error: Exception | None = None
         for attempt in range(max_retries + 1):
             try:
-                collected.extend(fetch_month(symbol.code, month, timeout=timeout))
+                if cache is None:
+                    month_rows = fetch_month(symbol.code, month, timeout=timeout)
+                else:
+                    month_rows = _cached_month(
+                        symbol.market,
+                        symbol.code,
+                        month,
+                        timeout=timeout,
+                        cache=cache,
+                        refresh=refresh,
+                        today=today,
+                    )
+                collected.extend(month_rows)
                 last_error = None
                 break
             except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_error = exc
-            except HistoricalPriceError as exc:
+            except (HistoricalPriceError, ValueError) as exc:
                 last_error = exc
             if attempt < max_retries:
                 time.sleep(retry_backoff * (2**attempt))
