@@ -15,8 +15,11 @@ from .analytics import (
 )
 from .calendar import TaiwanTradingCalendar
 from .normalize import read_ohlcv_csv
+from .quotes import fetch_closing_quote
 from .symbols import normalize_symbol
 from .validation import validate_ohlcv
+
+_MARKET_CHOICES = ["TWSE", "TPEX", "TW", "TWO", "OTC"]
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -31,10 +34,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Normalize a Taiwan stock ticker",
     )
     symbol.add_argument("value")
-    symbol.add_argument(
-        "--market",
-        choices=["TWSE", "TPEX", "TW", "TWO", "OTC"],
+    symbol.add_argument("--market", choices=_MARKET_CHOICES)
+
+    quote = subparsers.add_parser(
+        "quote",
+        help="Fetch the latest official closing quote for a Taiwan security",
     )
+    quote.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
+    quote.add_argument("--market", choices=_MARKET_CHOICES)
+    quote.add_argument("--timeout", type=float, default=10.0)
 
     calendar = subparsers.add_parser(
         "calendar",
@@ -104,6 +112,18 @@ def main() -> None:
             "yahoo": result.yahoo,
         }
         print(json.dumps(payload))
+        return
+
+    if args.command == "quote":
+        result = fetch_closing_quote(args.value, args.market, timeout=args.timeout)
+        payload = {
+            "date": result.date.isoformat(),
+            "code": result.code,
+            "name": result.name,
+            "market": result.market.value,
+            "close": str(result.close) if result.close is not None else None,
+        }
+        print(json.dumps(payload, ensure_ascii=False))
         return
 
     if args.command == "calendar":
