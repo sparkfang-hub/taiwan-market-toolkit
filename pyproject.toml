@@ -23,6 +23,12 @@ classifiers = [
 
 dependencies = []
 
+[project.urls]
+Homepage = "https://github.com/sparkfang-hub/taiwan-market-toolkit"
+Repository = "https://github.com/sparkfang-hub/taiwan-market-toolkit"
+Issues = "https://github.com/sparkfang-hub/taiwan-market-toolkit/issues"
+Changelog = "https://github.com/sparkfang-hub/taiwan-market-toolkit/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 mcp = [
   "mcp>=2,<3",
