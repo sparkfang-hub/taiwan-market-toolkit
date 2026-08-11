@@ -2,15 +2,14 @@ from datetime import date
 
 import pytest
 
-from taiwan_market_toolkit.directory import (
+from taiwan_market_toolkit import (
+    Market,
     SecurityProfile,
     find_company,
     parse_tpex_company_directory,
     parse_twse_company_directory,
     search_company_directory,
 )
-from taiwan_market_toolkit.symbols import Market
-
 
 TWSE_FIXTURE = """[
   {
