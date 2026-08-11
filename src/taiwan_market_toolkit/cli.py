@@ -6,6 +6,7 @@ import argparse
 import json
 from datetime import date
 from decimal import Decimal
+from typing import Any
 
 from .analytics import (
     daily_returns,
@@ -21,7 +22,8 @@ from .directory import (
     search_company_directory,
 )
 from .normalize import read_ohlcv_csv
-from .quotes import fetch_closing_quote
+from .overview import SecurityOverview, fetch_security_overview
+from .quotes import ClosingQuote, fetch_closing_quote
 from .snapshots import archive_official_closing_snapshot
 from .symbols import normalize_market, normalize_symbol
 from .validation import validate_ohlcv
@@ -73,6 +75,14 @@ def _build_parser() -> argparse.ArgumentParser:
     valuation.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
     valuation.add_argument("--market", choices=_MARKET_CHOICES)
     valuation.add_argument("--timeout", type=float, default=10.0)
+
+    overview = subparsers.add_parser(
+        "overview",
+        help="Fetch official company, closing quote, and valuation data together",
+    )
+    overview.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
+    overview.add_argument("--market", choices=_MARKET_CHOICES)
+    overview.add_argument("--timeout", type=float, default=10.0)
 
     archive = subparsers.add_parser(
         "archive-quotes",
@@ -149,6 +159,16 @@ def _profile_payload(profile: SecurityProfile) -> dict[str, str | None]:
     }
 
 
+def _quote_payload(quote: ClosingQuote) -> dict[str, str | None]:
+    return {
+        "date": quote.date.isoformat(),
+        "code": quote.code,
+        "name": quote.name,
+        "market": quote.market.value,
+        "close": str(quote.close) if quote.close is not None else None,
+    }
+
+
 def _valuation_payload(metrics: ValuationMetrics) -> dict[str, str | None]:
     return {
         "date": metrics.date.isoformat(),
@@ -159,6 +179,17 @@ def _valuation_payload(metrics: ValuationMetrics) -> dict[str, str | None]:
         "dividend_yield_pct": _json_value(metrics.dividend_yield_pct),
         "price_to_book": _json_value(metrics.price_to_book),
         "dividend_per_share": _json_value(metrics.dividend_per_share),
+    }
+
+
+def _overview_payload(overview: SecurityOverview) -> dict[str, Any]:
+    return {
+        "code": overview.code,
+        "market": overview.market.value,
+        "yahoo": overview.yahoo,
+        "profile": _profile_payload(overview.profile),
+        "quote": _quote_payload(overview.quote),
+        "valuation": _valuation_payload(overview.valuation),
     }
 
 
@@ -195,19 +226,17 @@ def main() -> None:
 
     if args.command == "quote":
         result = fetch_closing_quote(args.value, args.market, timeout=args.timeout)
-        payload = {
-            "date": result.date.isoformat(),
-            "code": result.code,
-            "name": result.name,
-            "market": result.market.value,
-            "close": str(result.close) if result.close is not None else None,
-        }
-        print(json.dumps(payload, ensure_ascii=False))
+        print(json.dumps(_quote_payload(result), ensure_ascii=False))
         return
 
     if args.command == "valuation":
         result = find_valuation(args.value, args.market, timeout=args.timeout)
         print(json.dumps(_valuation_payload(result), ensure_ascii=False))
+        return
+
+    if args.command == "overview":
+        result = fetch_security_overview(args.value, args.market, timeout=args.timeout)
+        print(json.dumps(_overview_payload(result), ensure_ascii=False))
         return
 
     if args.command == "archive-quotes":

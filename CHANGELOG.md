@@ -12,6 +12,8 @@ All notable changes to this project will be documented here.
 - `tw-market company` and `tw-market search-company` commands for official company identity metadata.
 - Read-only official TWSE/TPEx valuation adapters with a common `ValuationMetrics` model for P/E ratio, dividend yield, and price-to-book ratio.
 - `tw-market valuation` command and MCP valuation tool.
+- `SecurityOverview` convenience layer combining official company identity, closing quote, and valuation data while preserving independent source dates.
+- `tw-market overview` command and `get_official_security_overview` MCP tool.
 - Lightweight trading-calendar helpers with explicit closure/opening support.
 - Official TWSE OpenAPI holiday-schedule provider and ROC-date parsing.
 - Read-only TWSE and TPEx official closing-quote adapters with a common `ClosingQuote` model.
@@ -26,9 +28,9 @@ All notable changes to this project will be documented here.
 - ROC-calendar date support for normalized OHLCV records and CSV input.
 - OHLCV validation for price invariants, volume, duplicates, and ordering.
 - Strategy-neutral OHLCV analytics: SMA, EMA, one-period returns, summaries, and trading-day gap detection.
-- Command-line interface for company lookup/search, symbol, quote, valuation, local archiving, calendar, CSV validation, and descriptive analysis utilities.
+- Command-line interface for company lookup/search, symbol, quote, valuation, overview, local archiving, calendar, CSV validation, and descriptive analysis utilities.
 - Optional MCP server using the official MCP Python SDK v2.
-- MCP tools for official company profiles/search, closing quotes, valuation metrics, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
+- MCP tools for official security overview, company profiles/search, closing quotes, valuation metrics, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
 - Runnable examples for Chinese CSV input, TWSE calendar queries, local snapshot archiving, and MCP clients.
 - PyPI Trusted Publishing workflow and a documented release checklist.
 - Distribution build and metadata validation in CI.

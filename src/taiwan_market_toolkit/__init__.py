@@ -29,6 +29,7 @@ from .normalize import (
     parse_ohlcv_csv,
     read_ohlcv_csv,
 )
+from .overview import SecurityOverview, fetch_security_overview
 from .quotes import (
     ClosingQuote,
     fetch_closing_quote,
@@ -67,6 +68,7 @@ __all__ = [
     "NormalizationResult",
     "OHLCVRow",
     "OHLCVSummary",
+    "SecurityOverview",
     "SecurityProfile",
     "SeriesPoint",
     "SnapshotStore",
@@ -82,6 +84,7 @@ __all__ = [
     "exponential_moving_average",
     "fetch_closing_quote",
     "fetch_company_directory",
+    "fetch_security_overview",
     "fetch_tpex_closing_payload",
     "fetch_tpex_closing_quotes",
     "fetch_tpex_company_directory",
