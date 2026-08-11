@@ -20,8 +20,9 @@ The project is infrastructure, not a trading strategy. It deliberately excludes 
 - Recognize common Traditional Chinese OHLCV headers such as `交易日期`, `開盤價`, `最高價`, `最低價`, `收盤價`, and `成交股數`.
 - Parse common ROC-calendar dates such as `115/08/11` and `1150811`.
 - Validate OHLCV rows for malformed prices, negative volume, duplicates, and ordering issues.
-- Use a CLI for symbol, calendar, and CSV validation operations.
-- Expose non-strategy utilities to AI hosts through an optional MCP server.
+- Calculate strategy-neutral SMA, EMA, daily returns, descriptive summaries, and missing trading dates.
+- Use a CLI for symbol, calendar, validation, and OHLCV analysis operations.
+- Expose non-strategy utilities and descriptive analytics to AI hosts through an optional MCP server.
 - Build and test on Python 3.10, 3.11, and 3.12 through GitHub Actions.
 - Build and validate wheel/source distributions on every pull request.
 
@@ -195,6 +196,32 @@ for issue in result.issues:
 
 Validation checks OHLC price invariants, negative volume, duplicate dates, and chronological ordering. Normalization and validation are intentionally separate so callers can choose whether to sort input before checking it.
 
+### Descriptive analytics
+
+Moving averages and returns operate on the normalized OHLCV representation and do not generate trading signals:
+
+```python
+from taiwan_market_toolkit import (
+    daily_returns,
+    exponential_moving_average,
+    simple_moving_average,
+    summarize_ohlcv,
+)
+
+summary = summarize_ohlcv(rows)
+sma20 = simple_moving_average(rows, 20)
+ema20 = exponential_moving_average(rows, 20)
+returns = daily_returns(rows)
+```
+
+To audit gaps, provide an explicit exchange-aware calendar rather than assuming every weekday is a trading day:
+
+```python
+from taiwan_market_toolkit import find_missing_trading_days
+
+missing = find_missing_trading_days(rows, calendar)
+```
+
 ### CLI
 
 ```bash
@@ -203,9 +230,10 @@ tw-market symbol 6488 --market TPEX
 tw-market calendar 2026-08-07 --next
 tw-market validate examples/sample_ohlcv_zh.csv
 tw-market validate prices.csv --no-sort
+tw-market analyze prices.csv --sma 5 --sma 20 --ema 20
 ```
 
-The `validate` command prints JSON with row count, validity, and individual issues.
+The `validate` command reports data-quality issues. The `analyze` command reports the date range, close range, total volume, latest fractional return, and any caller-selected SMA/EMA windows as JSON.
 
 ## MCP server
 
@@ -224,6 +252,7 @@ The server currently exposes:
 - `check_trading_day` — apply weekend rules plus caller-supplied closures/openings;
 - `check_twse_trading_day` — query the official TWSE OpenAPI schedule;
 - `validate_ohlcv_csv_text` — normalize and validate CSV-formatted OHLCV data;
+- `analyze_ohlcv_csv_text` — summarize OHLCV data and calculate caller-selected SMA/EMA windows;
 - `taiwan-market://about` — describe the project scope and safety boundary.
 
 The core MCP tools require no brokerage credentials and provide no order execution. The TWSE calendar tool performs a read-only request to the public TWSE OpenAPI endpoint.
