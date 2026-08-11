@@ -1,18 +1,24 @@
 # Taiwan Market Toolkit
 
-Open-source Python utilities for working with Taiwan stock-market data from TWSE and TPEx.
+Open-source Python infrastructure for working with public Taiwan stock-market data from TWSE and TPEx.
 
-Taiwan-market datasets have details that generic market libraries often leave to each application: `.TW`/`.TWO` symbols, ROC-calendar dates, Traditional Chinese CSV headers, exchange-specific company schemas, official closing snapshots, historical monthly price pages, valuation fields, and holiday schedules. Taiwan Market Toolkit puts those edges behind small, testable APIs that can be reused by research pipelines, data-quality jobs, command-line tools, and AI agents.
+Taiwan-market datasets have details that generic market libraries often leave to every downstream application: `.TW`/`.TWO` symbols, ROC-calendar dates, Traditional Chinese CSV headers, exchange-specific company schemas, independently dated market snapshots, monthly historical pages, corporate-action announcements, valuation fields, and trading calendars. Taiwan Market Toolkit puts those edges behind small, testable APIs that can be reused by research pipelines, data-quality jobs, command-line tools, and AI agents.
 
 This project is infrastructure, not a trading strategy. It deliberately excludes private signals, brokerage credentials, portfolio recommendations, and order execution.
+
+For a short end-to-end walkthrough, start with `docs/quickstart.md`.
 
 ## Current capabilities
 
 - Normalize TWSE/TPEx tickers and market aliases.
 - Fetch and search a unified company directory from official TWSE and TPEx basic-data sources.
-- Fetch official closing snapshots for listed and TPEx main-board securities.
+- Fetch official closing snapshots for TWSE and TPEx main-board securities.
+- Join the official company universe, closing quotes, and valuation metrics into a market-wide snapshot while preserving independent source dates.
+- Filter market snapshots by identity, market, industry code, and source coverage without creating investment rankings.
 - Fetch official monthly daily-price history for ordinary four-digit TWSE/TPEx common equities.
+- Cache completed historical months as exact official response bytes with SHA-256 verification.
 - Fetch common official valuation metrics: P/E ratio, dividend yield, and price-to-book ratio.
+- Normalize current official TWSE/TPEx ex-rights and ex-dividend announcements into a common corporate-action model.
 - Query a Taiwan trading calendar with explicit closure/opening overrides and the official TWSE holiday schedule.
 - Normalize OHLCV records, CSV files, and pandas-like DataFrames.
 - Recognize common Traditional Chinese headers such as `交易日期`, `開盤價`, `最高價`, `最低價`, `收盤價`, and `成交股數`.
@@ -20,9 +26,9 @@ This project is infrastructure, not a trading strategy. It deliberately excludes
 - Validate OHLCV price invariants, volume, duplicates, and ordering.
 - Calculate strategy-neutral SMA, EMA, one-period returns, summaries, and missing trading dates.
 - Preserve exact official closing-snapshot JSON locally with SHA-256 integrity metadata.
-- Expose read-only market utilities and bounded historical queries through an optional MCP server.
-- Test on Python 3.10, 3.11, and 3.12 and validate wheel/source distributions in CI.
-- Run a separate scheduled smoke check against official exchange sources while keeping unit tests deterministic.
+- Expose bounded, read-only market utilities through an optional MCP server.
+- Test on Python 3.10, 3.11, and 3.12, validate distributions, and smoke-test built wheels on Linux, macOS, and Windows.
+- Run separate scheduled smoke checks against official exchange sources while keeping ordinary unit tests deterministic.
 
 ## Installation
 
@@ -47,6 +53,8 @@ python -m pip install -e '.[dev]'
 ruff check .
 pytest
 ```
+
+See `docs/quickstart.md` for a five-minute path through company data, market snapshots, historical prices, corporate actions, Taiwan-style CSV input, and MCP.
 
 ## Company directory
 
@@ -95,6 +103,29 @@ tpex = fetch_tpex_closing_quotes()
 
 The common `ClosingQuote` model contains market, trading date, code, name, and closing price. Exchange-specific fields remain in the original official payload instead of being guessed into a shared schema.
 
+## Joined market snapshots
+
+Build a current cross-source view of the listed-company universe:
+
+```python
+from taiwan_market_toolkit import fetch_market_snapshot, summarize_market_snapshot
+
+rows = fetch_market_snapshot()
+summary = summarize_market_snapshot(rows)
+print(summary.rows, summary.missing_quote, summary.missing_valuation)
+```
+
+The company directory defines the row universe. Closing and valuation feeds are left-joined by exact market/code, so a missing daily source row remains visible rather than silently removing the company. Quote and valuation dates remain separate.
+
+CLI:
+
+```bash
+tw-market market-snapshot --summary-only
+tw-market market-snapshot --output market-data/taiwan-equities.csv
+```
+
+The library also provides deterministic identity/source-coverage filtering, and the MCP server exposes a bounded market-snapshot query tool. See `docs/market-snapshots.md`.
+
 ## Official historical prices
 
 The exchange historical pages expose individual-security daily history one month at a time. The toolkit hides the month-by-month request loop, normalizes ROC dates and source fields, applies conservative pacing/retry behavior, and returns one common `HistoricalPrice` representation.
@@ -107,6 +138,7 @@ prices = fetch_price_history(
     "2330.TW",
     start=date(2026, 1, 1),
     end=date(2026, 8, 11),
+    cache_dir="market-cache/history",
 )
 
 rows = history_to_ohlcv(prices)
@@ -114,7 +146,32 @@ rows = history_to_ohlcv(prices)
 
 TPEx common-stock history labels volume in trading lots and trade value in thousands. For ordinary four-digit common equities, those quantities are normalized to shares and TWD. Non-four-digit products are rejected in v0.1 rather than silently applying the wrong trading-unit convention.
 
+Completed months can be cached as exact official payload bytes with digest verification. The current month remains live because it can still change.
+
 The historical adapter is intentionally unadjusted. It does not infer dividend, split, capital-reduction, or other corporate-action adjustments from price jumps. See `docs/historical-prices.md` for the full scope and reliability model.
+
+## Corporate-action announcements
+
+Current official TWSE and TPEx ex-rights/ex-dividend announcement tables can be normalized into one model:
+
+```python
+from taiwan_market_toolkit import fetch_corporate_actions
+
+rows = fetch_corporate_actions()
+for row in rows[:5]:
+    print(
+        row.date,
+        row.market.value,
+        row.code,
+        row.kind.value,
+        row.cash_dividend_per_share,
+        row.stock_dividend_ratio,
+    )
+```
+
+Pending exchange values remain `None`; a published numeric zero remains zero. The normalized model includes stock-dividend ratios, cash dividends, cash-capital-increase subscription terms, and related subscription fields when published.
+
+This is an announcement-data layer, not an adjusted-price engine. Price-adjustment methodology remains intentionally separate. See `docs/corporate-actions.md`.
 
 ## Official valuation metrics
 
@@ -215,6 +272,8 @@ tw-market search-company 台積
 tw-market quote 2330.TW
 tw-market valuation 2330.TW
 tw-market overview 2330.TW
+tw-market market-snapshot --summary-only
+tw-market market-snapshot --output market-data/taiwan-equities.csv
 tw-market history 2330.TW --start 2026-01-01 --end 2026-08-11
 tw-market history 6488.TWO --start 2026-01-01 --end 2026-08-11 --output data/6488.csv
 tw-market calendar 2026-08-07 --next
@@ -239,6 +298,7 @@ Current MCP tools include:
 - `get_official_company_profile`
 - `search_official_company_directory`
 - `get_official_closing_quote`
+- `query_official_market_snapshot`
 - `get_official_price_history`
 - `get_official_valuation_metrics`
 - `get_official_security_overview`
@@ -247,7 +307,7 @@ Current MCP tools include:
 - `validate_ohlcv_csv_text`
 - `analyze_ohlcv_csv_text`
 
-The history MCP tool is limited to 24 calendar months and at most 1,000 returned rows per call. The MCP surface is intentionally read-only with respect to markets and excludes brokerage execution and private trading strategies.
+Market-snapshot and historical queries have explicit response/range limits so an AI host cannot accidentally turn a small question into an unbounded exchange crawl or context dump. The MCP surface is intentionally read-only with respect to markets and excludes brokerage execution and private trading strategies.
 
 ## Official-source reliability
 
@@ -263,17 +323,23 @@ Current official integrations include:
 - TPEx individual main-board historical prices: `www/zh-tw/afterTrading/tradingStock`
 - TWSE valuation snapshot: `exchangeReport/BWIBBU_ALL`
 - TPEx valuation snapshot: `tpex_mainboard_peratio_analysis`
+- TWSE ex-rights/ex-dividend announcements: `exchangeReport/TWT48U_ALL`
+- TPEx ex-rights/ex-dividend announcements: `tpex_exright_prepost`
 - TWSE holiday schedule: `holidaySchedule/holidaySchedule`
 
 See `docs/data-sources.md` for provenance, caching, and failure-behavior rules.
 
-## Packaging and releases
+## Packaging and maintenance
 
-Pull requests build and validate a wheel and source distribution. A PyPI Trusted Publishing workflow is present, but the first public release is intentionally gated on the release checklist in `docs/releasing.md` rather than being published just to create activity.
+Pull requests run the Python 3.10-3.12 test matrix, build and validate wheel/source distributions, and install the built wheel on Linux, macOS, and Windows. Monthly dependency maintenance is configured for Python and GitHub Actions dependencies.
+
+A PyPI Trusted Publishing workflow is present, but the first public release is intentionally gated on `docs/releasing.md` rather than being published simply to create activity. Maintainer triage, upstream-source incidents, compatibility expectations, and release handling are documented in `docs/maintaining.md`.
 
 ## Contributing
 
 Contributions are welcome. See `CONTRIBUTING.md`, `docs/architecture.md`, and the issue templates before opening a pull request. Do not submit proprietary datasets, brokerage credentials, private trading strategies, or data that cannot legally be redistributed.
+
+For reproducible source/parser bugs, the most useful report includes the exchange, endpoint, Python version, operating system, and the smallest redistributable example that demonstrates the problem.
 
 ## License
 
