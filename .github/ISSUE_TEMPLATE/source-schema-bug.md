@@ -3,7 +3,7 @@ name: Official source or schema problem
 about: Report an official TWSE/TPEx endpoint outage, schema change, or parser mismatch
 title: "[source] "
 labels: bug
-aassignees: ""
+assignees: ""
 ---
 
 ## Source
