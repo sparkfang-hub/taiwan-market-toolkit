@@ -2,7 +2,11 @@
 
 from datetime import date
 
-from taiwan_market_toolkit import fetch_price_history, history_to_ohlcv, simple_moving_average
+from taiwan_market_toolkit import (
+    fetch_price_history,
+    history_to_ohlcv,
+    simple_moving_average,
+)
 
 
 prices = fetch_price_history(
