@@ -5,6 +5,7 @@ import pytest
 
 from taiwan_market_toolkit.quotes import (
     ClosingQuote,
+    fetch_closing_quote,
     parse_tpex_closing_quotes,
     parse_twse_closing_quotes,
 )
@@ -60,6 +61,28 @@ def test_parse_tpex_closing_quotes_supports_roc_dates():
     assert quotes[0].date == date(2026, 8, 11)
     assert quotes[0].code == "6488"
     assert quotes[0].close == Decimal("350.5")
+
+
+def test_fetch_closing_quote_dispatches_by_suffix(monkeypatch):
+    twse_quote = parse_twse_closing_quotes(TWSE_FIXTURE)[0]
+    tpex_quote = parse_tpex_closing_quotes(TPEX_FIXTURE)[0]
+
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.quotes.fetch_twse_closing_quotes",
+        lambda *, timeout: [twse_quote],
+    )
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.quotes.fetch_tpex_closing_quotes",
+        lambda *, timeout: [tpex_quote],
+    )
+
+    assert fetch_closing_quote("2330.TW", timeout=1).code == "2330"
+    assert fetch_closing_quote("6488.TWO", timeout=1).code == "6488"
+
+
+def test_fetch_closing_quote_requires_market_for_bare_symbol():
+    with pytest.raises(ValueError, match="market is required"):
+        fetch_closing_quote("2330")
 
 
 def test_quote_payload_must_be_array():
