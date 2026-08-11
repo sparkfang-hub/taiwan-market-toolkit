@@ -3,14 +3,12 @@ from decimal import Decimal
 
 import pytest
 
+from taiwan_market_toolkit import ClosingQuote, Market
 from taiwan_market_toolkit.quotes import (
-    ClosingQuote,
     fetch_closing_quote,
     parse_tpex_closing_quotes,
     parse_twse_closing_quotes,
 )
-from taiwan_market_toolkit.symbols import Market
-
 
 TWSE_FIXTURE = """[
   {
