@@ -6,7 +6,6 @@ import pytest
 from taiwan_market_toolkit import history
 from taiwan_market_toolkit.symbols import Market
 
-
 TWSE_PAYLOAD = """{
   "stat": "OK",
   "date": "20260801",
