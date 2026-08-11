@@ -34,6 +34,7 @@ from .history import (
     write_history_csv,
 )
 from .history_cache import HistoricalPayloadCache, HistoryCacheWriteResult
+from .market_query import filter_market_snapshot
 from .market_snapshot import (
     MarketSnapshotRow,
     MarketSnapshotSummary,
@@ -131,6 +132,7 @@ __all__ = [
     "fetch_twse_holiday_schedule",
     "fetch_twse_valuation",
     "fetch_valuation_metrics",
+    "filter_market_snapshot",
     "find_company",
     "find_missing_trading_days",
     "find_valuation",
