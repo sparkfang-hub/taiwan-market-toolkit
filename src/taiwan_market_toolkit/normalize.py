@@ -7,6 +7,7 @@ canonical :class:`OHLCVRow` representation without requiring pandas.
 from __future__ import annotations
 
 import csv
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -19,12 +20,35 @@ from .validation import OHLCVRow, ValidationIssue, validate_ohlcv
 
 _CANONICAL_FIELDS = ("date", "open", "high", "low", "close", "volume")
 _DEFAULT_ALIASES: dict[str, tuple[str, ...]] = {
-    "date": ("date", "datetime", "timestamp", "time", "trading_date"),
-    "open": ("open", "o", "open_price"),
-    "high": ("high", "h", "high_price"),
-    "low": ("low", "l", "low_price"),
-    "close": ("close", "c", "close_price", "adj_close", "adjusted_close"),
-    "volume": ("volume", "vol", "v", "trade_volume"),
+    "date": (
+        "date",
+        "datetime",
+        "timestamp",
+        "time",
+        "trading_date",
+        "日期",
+        "交易日期",
+    ),
+    "open": ("open", "o", "open_price", "開盤", "開盤價"),
+    "high": ("high", "h", "high_price", "最高", "最高價"),
+    "low": ("low", "l", "low_price", "最低", "最低價"),
+    "close": (
+        "close",
+        "c",
+        "close_price",
+        "adj_close",
+        "adjusted_close",
+        "收盤",
+        "收盤價",
+    ),
+    "volume": (
+        "volume",
+        "vol",
+        "v",
+        "trade_volume",
+        "成交量",
+        "成交股數",
+    ),
 }
 
 
@@ -41,7 +65,7 @@ def _normalized_key(value: Any) -> str:
 
 
 def infer_column_map(columns: Iterable[Any]) -> dict[str, str]:
-    """Infer canonical OHLCV fields from common column names.
+    """Infer canonical OHLCV fields from common English or Traditional Chinese names.
 
     Returns a mapping from canonical field name to the original source column.
     Raises ``ValueError`` when any required field cannot be resolved.
@@ -72,6 +96,19 @@ def infer_column_map(columns: Iterable[Any]) -> dict[str, str]:
     return resolved
 
 
+def _parse_roc_date(raw: str) -> date | None:
+    """Parse common ROC-calendar date strings such as ``115/08/11`` or ``1150811``."""
+    match = re.fullmatch(r"(\d{3})[/-]?(\d{2})[/-]?(\d{2})", raw)
+    if match is None:
+        return None
+
+    year, month, day = (int(part) for part in match.groups())
+    try:
+        return date(year + 1911, month, day)
+    except ValueError as exc:
+        raise ValueError(f"invalid ROC date value: {raw!r}") from exc
+
+
 def _parse_date(value: Any) -> date:
     if isinstance(value, datetime):
         return value.date()
@@ -81,6 +118,10 @@ def _parse_date(value: Any) -> date:
     raw = str(value).strip()
     if not raw:
         raise ValueError("date is empty")
+
+    roc_date = _parse_roc_date(raw)
+    if roc_date is not None:
+        return roc_date
 
     candidates = ("%Y-%m-%d", "%Y/%m/%d", "%Y%m%d")
     for fmt in candidates:
@@ -130,7 +171,7 @@ def normalize_ohlcv_records(
 
     ``column_map`` maps canonical names (``date/open/high/low/close/volume``) to
     source column names. When omitted, common aliases are inferred from the first
-    record.
+    record. Gregorian and common ROC-calendar dates are accepted.
     """
     materialized = list(records)
     if not materialized:
