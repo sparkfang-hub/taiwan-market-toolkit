@@ -2,8 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-
-from taiwan_market_toolkit import corporate_actions
+import taiwan_market_toolkit.corporate_actions as corporate_actions
 from taiwan_market_toolkit.corporate_actions import (
     CorporateAction,
     CorporateActionKind,
