@@ -34,6 +34,14 @@ from .history import (
     write_history_csv,
 )
 from .history_cache import HistoricalPayloadCache, HistoryCacheWriteResult
+from .market_snapshot import (
+    MarketSnapshotRow,
+    MarketSnapshotSummary,
+    build_market_snapshot,
+    fetch_market_snapshot,
+    summarize_market_snapshot,
+    write_market_snapshot_csv,
+)
 from .normalize import (
     NormalizationResult,
     dataframe_to_ohlcv,
@@ -82,6 +90,8 @@ __all__ = [
     "HistoricalPriceError",
     "HistoryCacheWriteResult",
     "Market",
+    "MarketSnapshotRow",
+    "MarketSnapshotSummary",
     "NormalizedSymbol",
     "NormalizationResult",
     "OHLCVRow",
@@ -96,12 +106,14 @@ __all__ = [
     "ValidationIssue",
     "ValuationMetrics",
     "archive_official_closing_snapshot",
+    "build_market_snapshot",
     "calendar_from_twse_records",
     "daily_returns",
     "dataframe_to_ohlcv",
     "exponential_moving_average",
     "fetch_closing_quote",
     "fetch_company_directory",
+    "fetch_market_snapshot",
     "fetch_price_history",
     "fetch_security_overview",
     "fetch_tpex_closing_payload",
@@ -142,9 +154,11 @@ __all__ = [
     "read_ohlcv_csv",
     "search_company_directory",
     "simple_moving_average",
+    "summarize_market_snapshot",
     "summarize_ohlcv",
     "validate_ohlcv",
     "write_history_csv",
+    "write_market_snapshot_csv",
 ]
 
 __version__ = "0.1.0"
