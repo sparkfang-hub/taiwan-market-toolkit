@@ -28,6 +28,23 @@ python examples/check_twse_calendar.py
 
 For reproducible research, applications should cache the exact official payload used for a run rather than assuming a future response will remain unchanged.
 
+## Archive official closing snapshots
+
+This example fetches the current official TWSE and TPEx closing snapshots and stores their exact JSON response bytes under a local `market-data/` directory:
+
+```bash
+python examples/archive_closing_quotes.py
+```
+
+The equivalent CLI commands are:
+
+```bash
+tw-market archive-quotes --market TWSE --root market-data
+tw-market archive-quotes --market TPEX --root market-data
+```
+
+The archive is idempotent for identical bytes and refuses to silently overwrite changed content for the same exchange/date. See `docs/snapshots.md` for the integrity model.
+
 ## MCP client
 
 Install the optional MCP dependency and run an in-memory client against the toolkit server:
@@ -37,4 +54,4 @@ python -m pip install -e '.[mcp]'
 python examples/mcp_client.py
 ```
 
-The public MCP surface exposes data-normalization and calendar utilities only. It does not expose brokerage credentials, private strategies, trading signals, or order execution.
+The public MCP surface exposes read-only market utilities, data normalization, and descriptive analytics. It does not expose brokerage credentials, private strategies, trading signals, or order execution.
