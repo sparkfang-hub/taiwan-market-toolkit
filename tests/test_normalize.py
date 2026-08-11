@@ -26,6 +26,18 @@ def test_infer_common_column_aliases():
     }
 
 
+def test_infer_traditional_chinese_column_aliases():
+    mapping = infer_column_map(["交易日期", "開盤價", "最高價", "最低價", "收盤價", "成交股數"])
+    assert mapping == {
+        "date": "交易日期",
+        "open": "開盤價",
+        "high": "最高價",
+        "low": "最低價",
+        "close": "收盤價",
+        "volume": "成交股數",
+    }
+
+
 def test_normalize_records_sorts_and_coerces_values():
     rows = normalize_ohlcv_records(
         [
@@ -51,6 +63,34 @@ def test_normalize_records_sorts_and_coerces_values():
     assert [row.date for row in rows] == [date(2026, 8, 10), date(2026, 8, 11)]
     assert rows[1].open == Decimal("101.5")
     assert rows[1].volume == 1200
+
+
+def test_normalize_traditional_chinese_csv_with_roc_dates():
+    csv_text = """交易日期,開盤價,最高價,最低價,收盤價,成交股數
+115/08/11,101.5,110,100,108.5,"1,200"
+1150810,100,105,98,103,900
+"""
+    rows = parse_ohlcv_csv(csv_text)
+
+    assert [row.date for row in rows] == [date(2026, 8, 10), date(2026, 8, 11)]
+    assert rows[1].close == Decimal("108.5")
+    assert rows[1].volume == 1200
+
+
+def test_invalid_roc_date_is_rejected():
+    with pytest.raises(ValueError, match="invalid ROC date"):
+        normalize_ohlcv_records(
+            [
+                {
+                    "日期": "115/13/40",
+                    "開盤": 100,
+                    "最高": 101,
+                    "最低": 99,
+                    "收盤": 100,
+                    "成交量": 10,
+                }
+            ]
+        )
 
 
 def test_custom_column_map():
