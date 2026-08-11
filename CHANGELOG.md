@@ -10,6 +10,8 @@ All notable changes to this project will be documented here.
 - Taiwan stock symbol normalization for TWSE and TPEx suffix conventions.
 - Unified official TWSE/TPEx `SecurityProfile` company directory with local code/name search.
 - `tw-market company` and `tw-market search-company` commands for official company identity metadata.
+- Read-only official TWSE/TPEx valuation adapters with a common `ValuationMetrics` model for P/E ratio, dividend yield, and price-to-book ratio.
+- `tw-market valuation` command and MCP valuation tool.
 - Lightweight trading-calendar helpers with explicit closure/opening support.
 - Official TWSE OpenAPI holiday-schedule provider and ROC-date parsing.
 - Read-only TWSE and TPEx official closing-quote adapters with a common `ClosingQuote` model.
@@ -24,9 +26,9 @@ All notable changes to this project will be documented here.
 - ROC-calendar date support for normalized OHLCV records and CSV input.
 - OHLCV validation for price invariants, volume, duplicates, and ordering.
 - Strategy-neutral OHLCV analytics: SMA, EMA, one-period returns, summaries, and trading-day gap detection.
-- Command-line interface for company lookup/search, symbol, quote, local archiving, calendar, CSV validation, and descriptive analysis utilities.
+- Command-line interface for company lookup/search, symbol, quote, valuation, local archiving, calendar, CSV validation, and descriptive analysis utilities.
 - Optional MCP server using the official MCP Python SDK v2.
-- MCP tools for official company profiles/search, closing quotes, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
+- MCP tools for official company profiles/search, closing quotes, valuation metrics, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
 - Runnable examples for Chinese CSV input, TWSE calendar queries, local snapshot archiving, and MCP clients.
 - PyPI Trusted Publishing workflow and a documented release checklist.
 - Distribution build and metadata validation in CI.

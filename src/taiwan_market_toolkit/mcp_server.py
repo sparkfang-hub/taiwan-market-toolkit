@@ -27,6 +27,7 @@ from .quotes import fetch_closing_quote
 from .symbols import normalize_market, normalize_symbol
 from .twse import fetch_twse_calendar
 from .validation import validate_ohlcv
+from .valuation import ValuationMetrics, find_valuation
 
 
 def _profile_payload(profile: SecurityProfile) -> dict[str, Any]:
@@ -39,6 +40,25 @@ def _profile_payload(profile: SecurityProfile) -> dict[str, Any]:
         "english_name": profile.english_name,
         "industry": profile.industry,
         "listing_date": profile.listing_date.isoformat() if profile.listing_date else None,
+    }
+
+
+def _valuation_payload(metrics: ValuationMetrics) -> dict[str, Any]:
+    return {
+        "date": metrics.date.isoformat(),
+        "code": metrics.code,
+        "name": metrics.name,
+        "market": metrics.market.value,
+        "pe_ratio": str(metrics.pe_ratio) if metrics.pe_ratio is not None else None,
+        "dividend_yield_pct": (
+            str(metrics.dividend_yield_pct) if metrics.dividend_yield_pct is not None else None
+        ),
+        "price_to_book": (
+            str(metrics.price_to_book) if metrics.price_to_book is not None else None
+        ),
+        "dividend_per_share": (
+            str(metrics.dividend_per_share) if metrics.dividend_per_share is not None else None
+        ),
     }
 
 
@@ -56,9 +76,9 @@ def create_mcp_server():
         version="0.1.0",
         instructions=(
             "Utilities for Taiwan market symbols, official company metadata, read-only "
-            "closing quotes, trading calendars, OHLCV data quality, and strategy-neutral "
-            "descriptive analytics. This server does not provide trading signals, "
-            "recommendations, or order execution."
+            "closing quotes and valuation metrics, trading calendars, OHLCV data quality, "
+            "and strategy-neutral descriptive analytics. This server does not provide "
+            "trading signals, recommendations, or order execution."
         ),
     )
 
@@ -116,6 +136,15 @@ def create_mcp_server():
             "market": result.market.value,
             "close": str(result.close) if result.close is not None else None,
         }
+
+    @server.tool()
+    def get_official_valuation_metrics(
+        value: str,
+        market: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        """Fetch official P/E, dividend yield, and P/B metrics for one security."""
+        return _valuation_payload(find_valuation(value, market, timeout=timeout))
 
     @server.tool()
     def check_trading_day(
@@ -206,9 +235,9 @@ def create_mcp_server():
         return (
             "Taiwan Market Toolkit provides non-strategy infrastructure for Taiwan market "
             "symbol normalization, official company identity metadata, read-only closing "
-            "quotes, exchange-calendar queries, OHLCV data validation, and descriptive "
-            "analytics. It does not provide investment advice, trading signals, or order "
-            "execution."
+            "quotes and valuation metrics, exchange-calendar queries, OHLCV data validation, "
+            "and descriptive analytics. It does not provide investment advice, trading "
+            "signals, or order execution."
         )
 
     return server

@@ -25,6 +25,7 @@ from .quotes import fetch_closing_quote
 from .snapshots import archive_official_closing_snapshot
 from .symbols import normalize_market, normalize_symbol
 from .validation import validate_ohlcv
+from .valuation import ValuationMetrics, find_valuation
 
 _MARKET_CHOICES = ["TWSE", "TPEX", "TW", "TWO", "OTC"]
 
@@ -64,6 +65,14 @@ def _build_parser() -> argparse.ArgumentParser:
     quote.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
     quote.add_argument("--market", choices=_MARKET_CHOICES)
     quote.add_argument("--timeout", type=float, default=10.0)
+
+    valuation = subparsers.add_parser(
+        "valuation",
+        help="Fetch official P/E, dividend yield, and P/B metrics",
+    )
+    valuation.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
+    valuation.add_argument("--market", choices=_MARKET_CHOICES)
+    valuation.add_argument("--timeout", type=float, default=10.0)
 
     archive = subparsers.add_parser(
         "archive-quotes",
@@ -140,6 +149,19 @@ def _profile_payload(profile: SecurityProfile) -> dict[str, str | None]:
     }
 
 
+def _valuation_payload(metrics: ValuationMetrics) -> dict[str, str | None]:
+    return {
+        "date": metrics.date.isoformat(),
+        "code": metrics.code,
+        "name": metrics.name,
+        "market": metrics.market.value,
+        "pe_ratio": _json_value(metrics.pe_ratio),
+        "dividend_yield_pct": _json_value(metrics.dividend_yield_pct),
+        "price_to_book": _json_value(metrics.price_to_book),
+        "dividend_per_share": _json_value(metrics.dividend_per_share),
+    }
+
+
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
@@ -181,6 +203,11 @@ def main() -> None:
             "close": str(result.close) if result.close is not None else None,
         }
         print(json.dumps(payload, ensure_ascii=False))
+        return
+
+    if args.command == "valuation":
+        result = find_valuation(args.value, args.market, timeout=args.timeout)
+        print(json.dumps(_valuation_payload(result), ensure_ascii=False))
         return
 
     if args.command == "archive-quotes":

@@ -8,6 +8,7 @@ from taiwan_market_toolkit.directory import SecurityProfile
 from taiwan_market_toolkit.mcp_server import create_mcp_server
 from taiwan_market_toolkit.quotes import ClosingQuote
 from taiwan_market_toolkit.symbols import Market
+from taiwan_market_toolkit.valuation import ValuationMetrics
 
 
 @pytest.fixture
@@ -108,6 +109,40 @@ async def test_mcp_official_closing_quote(mcp_client, monkeypatch):
         "name": "台積電",
         "market": "TWSE",
         "close": "1005",
+    }
+
+
+@pytest.mark.anyio
+async def test_mcp_official_valuation_metrics(mcp_client, monkeypatch):
+    metrics = ValuationMetrics(
+        market=Market.TWSE,
+        date=date(2026, 8, 10),
+        code="2330",
+        name="台積電",
+        pe_ratio=Decimal("25.50"),
+        dividend_yield_pct=Decimal("1.75"),
+        price_to_book=Decimal("6.80"),
+    )
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.mcp_server.find_valuation",
+        lambda value, market, *, timeout: metrics,
+    )
+
+    result = await mcp_client.call_tool(
+        "get_official_valuation_metrics",
+        {"value": "2330.TW"},
+    )
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "date": "2026-08-10",
+        "code": "2330",
+        "name": "台積電",
+        "market": "TWSE",
+        "pe_ratio": "25.50",
+        "dividend_yield_pct": "1.75",
+        "price_to_book": "6.80",
+        "dividend_per_share": None,
     }
 
 

@@ -8,6 +8,7 @@ from taiwan_market_toolkit.directory import SecurityProfile
 from taiwan_market_toolkit.quotes import ClosingQuote
 from taiwan_market_toolkit.snapshots import SnapshotWriteResult
 from taiwan_market_toolkit.symbols import Market
+from taiwan_market_toolkit.valuation import ValuationMetrics
 
 
 def test_analyze_cli_reports_summary_and_moving_averages(tmp_path, monkeypatch, capsys):
@@ -114,6 +115,37 @@ def test_quote_cli_serializes_official_quote(monkeypatch, capsys):
         "name": "台積電",
         "market": "TWSE",
         "close": "1005",
+    }
+
+
+def test_valuation_cli_serializes_official_metrics(monkeypatch, capsys):
+    metrics = ValuationMetrics(
+        market=Market.TWSE,
+        date=date(2026, 8, 10),
+        code="2330",
+        name="台積電",
+        pe_ratio=Decimal("25.50"),
+        dividend_yield_pct=Decimal("1.75"),
+        price_to_book=Decimal("6.80"),
+    )
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.cli.find_valuation",
+        lambda value, market, *, timeout: metrics,
+    )
+    monkeypatch.setattr(sys, "argv", ["tw-market", "valuation", "2330.TW"])
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {
+        "date": "2026-08-10",
+        "code": "2330",
+        "name": "台積電",
+        "market": "TWSE",
+        "pe_ratio": "25.50",
+        "dividend_yield_pct": "1.75",
+        "price_to_book": "6.80",
+        "dividend_per_share": None,
     }
 
 
