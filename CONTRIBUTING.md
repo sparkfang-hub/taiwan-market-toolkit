@@ -2,7 +2,7 @@
 
 Thanks for considering a contribution to Taiwan Market Toolkit.
 
-Please read `CODE_OF_CONDUCT.md` before participating. For design boundaries and module responsibilities, see `docs/ARCHITECTURE.md`.
+Please read `CODE_OF_CONDUCT.md` before participating. For design boundaries and module responsibilities, see `docs/ARCHITECTURE.md`. Maintainers use the triage, source-incident, dependency, and release process documented in `docs/maintaining.md`.
 
 ## Development setup
 
@@ -20,8 +20,9 @@ ruff check .
 2. Keep pull requests focused and add tests for behavior changes.
 3. Do not include proprietary market data, API credentials, trading strategies, or data that cannot be redistributed.
 4. Prefer small, composable utilities with clear public APIs.
-5. Update documentation when adding or changing user-facing behavior.
+5. Update documentation and `CHANGELOG.md` when adding or changing user-facing behavior.
 6. Keep MCP tools thin and read-only with respect to brokerage/accounts; reusable market logic belongs in core modules first.
+7. Wait for the Python test matrix, package validation, and cross-platform built-wheel smoke tests to pass before merge.
 
 ## Data-source policy
 
