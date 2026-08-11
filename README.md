@@ -8,7 +8,8 @@ The project focuses on small, composable building blocks that can be reused in r
 
 - Normalize Taiwan tickers such as `2330`, `2330.TW`, and `6488.TWO`.
 - Represent TWSE and TPEx market identifiers consistently.
-- Query a lightweight Taiwan trading calendar with custom closure dates.
+- Query a Taiwan trading calendar with explicit closure/opening overrides.
+- Fetch and parse the official TWSE market holiday schedule from TWSE OpenAPI.
 - Validate OHLCV rows for malformed prices, negative volume, duplicates, and ordering issues.
 - Use a small CLI for symbol and calendar operations.
 - Run automated tests on Python 3.10, 3.11, and 3.12 through GitHub Actions.
@@ -62,7 +63,40 @@ calendar.is_trading_day(date(2026, 8, 10))
 calendar.next_trading_day(date(2026, 8, 7))
 ```
 
-Important: the v0.1 calendar does not bundle an exchange holiday database. It treats weekends as closed and accepts explicit closure dates. This avoids silently shipping stale holiday assumptions while a verified calendar data source is being designed.
+Explicit openings are supported as well as closures, which matters if the exchange announces a supplemental weekend trading day:
+
+```python
+calendar = TaiwanTradingCalendar.from_overrides(
+    closures=[date(2026, 1, 1)],
+    openings=[date(2026, 1, 3)],
+)
+```
+
+### Official TWSE holiday schedule
+
+TWSE publishes an official OpenAPI endpoint for the currently published market open/closure schedule. The toolkit can fetch that schedule and turn it into a ready-to-query calendar:
+
+```python
+from taiwan_market_toolkit import fetch_twse_calendar
+
+calendar = fetch_twse_calendar()
+```
+
+Network access is kept separate from parsing so applications can cache the official response or supply fixtures in tests:
+
+```python
+from taiwan_market_toolkit import (
+    calendar_from_twse_records,
+    parse_twse_holiday_payload,
+)
+
+records = parse_twse_holiday_payload(cached_json)
+calendar = calendar_from_twse_records(records)
+```
+
+Source: Taiwan Stock Exchange OpenAPI, `holidaySchedule/holidaySchedule`.
+
+The provider deliberately does not maintain a copied hard-coded holiday table. The official response remains the source of truth, while applications that require reproducible historical runs should cache the exact payload they used.
 
 ### Validate OHLCV data
 
@@ -99,7 +133,7 @@ Taiwan Market Toolkit is infrastructure, not a trading strategy. The project aim
 
 Planned areas include:
 
-- verified TWSE/TPEx trading-calendar providers;
+- richer TWSE/TPEx trading-calendar providers and caching;
 - tabular OHLCV normalization;
 - market metadata and security-master helpers;
 - data-source adapters with explicit licensing and provenance;

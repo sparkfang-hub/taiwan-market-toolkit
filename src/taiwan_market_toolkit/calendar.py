@@ -1,8 +1,7 @@
 """Lightweight Taiwan trading-calendar helpers.
 
-The core calendar deliberately avoids shipping a stale holiday table. Weekends are
-closed by default, while exchange-specific closure dates can be supplied by users
-or future data providers.
+Weekends are closed by default. Explicit closures can override weekdays, while
+explicit openings can represent exchange-announced supplemental trading days.
 """
 
 from __future__ import annotations
@@ -14,17 +13,39 @@ from datetime import date, timedelta
 
 @dataclass(slots=True)
 class TaiwanTradingCalendar:
-    """Determine trading days using weekends plus explicit closure dates."""
+    """Determine trading days from weekends plus explicit exchange overrides."""
 
     closures: set[date] = field(default_factory=set)
+    openings: set[date] = field(default_factory=set)
 
     @classmethod
     def from_closures(cls, closures: Iterable[date]) -> TaiwanTradingCalendar:
-        return cls(set(closures))
+        """Build a calendar from explicit closure dates."""
+        return cls(closures=set(closures))
+
+    @classmethod
+    def from_overrides(
+        cls,
+        *,
+        closures: Iterable[date] = (),
+        openings: Iterable[date] = (),
+    ) -> TaiwanTradingCalendar:
+        """Build a calendar from explicit closure and opening dates."""
+        closure_set = set(closures)
+        opening_set = set(openings)
+        overlap = closure_set & opening_set
+        if overlap:
+            joined = ", ".join(sorted(day.isoformat() for day in overlap))
+            raise ValueError(f"Dates cannot be both closed and open: {joined}")
+        return cls(closures=closure_set, openings=opening_set)
 
     def is_trading_day(self, day: date) -> bool:
-        """Return ``True`` when *day* is a weekday and not explicitly closed."""
-        return day.weekday() < 5 and day not in self.closures
+        """Return whether *day* is open for trading."""
+        if day in self.closures:
+            return False
+        if day in self.openings:
+            return True
+        return day.weekday() < 5
 
     def next_trading_day(self, day: date, *, include_current: bool = False) -> date:
         """Return the next trading day after *day* (or including it when requested)."""
