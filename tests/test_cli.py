@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from taiwan_market_toolkit.cli import main
 from taiwan_market_toolkit.quotes import ClosingQuote
+from taiwan_market_toolkit.snapshots import SnapshotWriteResult
 from taiwan_market_toolkit.symbols import Market
 
 
@@ -63,4 +64,57 @@ def test_quote_cli_serializes_official_quote(monkeypatch, capsys):
         "name": "台積電",
         "market": "TWSE",
         "close": "1005",
+    }
+
+
+def test_archive_quotes_cli_serializes_write_result(tmp_path, monkeypatch, capsys):
+    snapshot_path = (
+        tmp_path / "twse" / "closing_quotes" / "2026" / "2026-08-11.json"
+    )
+
+    def fake_archive(market, root, *, timeout, replace):
+        assert market == "TWSE"
+        assert root == str(tmp_path)
+        assert timeout == 2.0
+        assert replace is False
+        return SnapshotWriteResult(
+            source="twse/closing_quotes",
+            date=date(2026, 8, 11),
+            path=snapshot_path,
+            sha256="abc123",
+            bytes=321,
+            created=True,
+            replaced=False,
+        )
+
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.cli.archive_official_closing_snapshot",
+        fake_archive,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "tw-market",
+            "archive-quotes",
+            "--market",
+            "TWSE",
+            "--root",
+            str(tmp_path),
+            "--timeout",
+            "2",
+        ],
+    )
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {
+        "source": "twse/closing_quotes",
+        "date": "2026-08-11",
+        "path": str(snapshot_path),
+        "sha256": "abc123",
+        "bytes": 321,
+        "created": True,
+        "replaced": False,
     }
