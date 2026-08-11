@@ -6,85 +6,83 @@ Taiwan Market Toolkit prefers authoritative public sources and keeps fetching se
 
 ### Listed-company basic data
 
-Implemented source:
-
 `https://openapi.twse.com.tw/v1/opendata/t187ap03_L`
 
-The toolkit maps stable identity fields such as company code, company name, abbreviation, English name, industry code, and listing date into the common `SecurityProfile` model. Exchange-specific disclosure fields remain outside the common model.
+Stable identity fields are mapped into the common `SecurityProfile` model. Exchange-specific disclosure fields remain outside the common model.
 
 ### Holiday schedule
-
-Implemented source:
 
 `https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule`
 
-The toolkit parses the official JSON response into `TWSEHolidayRecord` objects and then builds a `TaiwanTradingCalendar` from explicit open/closure records.
+The JSON response is parsed into `TWSEHolidayRecord` objects and then into explicit calendar open/closure overrides.
 
 ### Current closing snapshot
 
-Implemented source:
-
 `https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL`
 
-The toolkit reads the common snapshot fields `Date`, `Code`, `Name`, and `ClosingPrice` and exposes them as a strategy-neutral `ClosingQuote`. Additional exchange-specific fields remain in the raw official payload and are not silently reinterpreted.
+The toolkit exposes the common fields date, code, name, market, and closing price as `ClosingQuote`.
+
+### Current valuation snapshot
+
+`https://openapi.twse.com.tw/v1/exchangeReport/BWIBBU_ALL`
+
+The toolkit maps published P/E ratio, dividend yield, and price-to-book ratio into `ValuationMetrics`. Missing/non-calculated values remain `None`.
 
 ## Taipei Exchange (TPEx)
 
-TPEx operates an official OpenAPI platform at:
-
-`https://www.tpex.org.tw/openapi/`
+TPEx operates an official OpenAPI platform at `https://www.tpex.org.tw/openapi/`.
 
 ### Main-board company basic data
 
-Implemented source:
-
 `https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O`
 
-The toolkit maps TPEx company-code, company-name, abbreviation, English symbol/name, industry code, and listing-date fields into the same `SecurityProfile` model used for TWSE identities. This unification is intentionally limited to fields with clear shared semantics.
+Company code, names, industry code, and listing date are mapped into the same `SecurityProfile` model used for TWSE identities.
 
 ### Current main-board closing snapshot
 
-Implemented source:
-
 `https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes`
 
-The common subset exposed by the toolkit is the trading date, security code, company name, market, and closing price. The adapter does not attempt to make TWSE- and TPEx-specific payloads look identical beyond fields with clear common meaning.
+The common subset is date, security code, company name, market, and closing price.
+
+### Current valuation snapshot
+
+`https://www.tpex.org.tw/openapi/v1/tpex_mainboard_peratio_analysis`
+
+The toolkit maps published P/E ratio, dividend yield, price-to-book ratio, and dividend per share when present into `ValuationMetrics`.
 
 ### Holiday schedule
 
-TPEx also publishes an official Holiday Schedule section on its website. A dedicated holiday endpoint was not identified in the current OpenAPI specification during the initial implementation work, so the toolkit does not pretend that a generic weekday calendar is authoritative for TPEx holidays.
+TPEx publishes an official Holiday Schedule section on its website. A dedicated holiday endpoint was not identified in the current OpenAPI specification during the initial implementation work, so the toolkit does not pretend that a generic weekday calendar is authoritative for TPEx holidays.
 
-Issue #2 tracks selection and implementation of the most stable authoritative TPEx holiday source. A future adapter should keep HTML/network fetching separate from parsing if the website schedule remains the best official source.
+Issue #2 tracks selection and implementation of the most stable authoritative TPEx holiday source.
 
 ## Reproducible raw snapshots
 
-Current-state APIs are useful for live tooling but do not guarantee that a future request will reproduce the payload seen by a previous research run. The toolkit therefore exposes raw-response fetchers and a local `SnapshotStore`.
+Current-state APIs do not guarantee that a later request will reproduce an older payload. `SnapshotStore` and `archive_official_closing_snapshot()` preserve exact closing-response bytes under deterministic source/date paths with SHA-256 metadata. Identical writes are idempotent; changed same-date content is rejected unless replacement is explicit.
 
-`archive_official_closing_snapshot()` preserves the exact official response bytes under deterministic source/date paths and records a SHA-256 digest. Identical repeated writes are idempotent. Different content for an already archived source/date is rejected unless replacement is explicitly requested.
-
-The archive intentionally remains local and separate from the package source tree. Downloaded market payloads are not committed to the repository by default. See `docs/snapshots.md` for the storage and integrity model.
+Downloaded market payloads are not committed to the repository by default. See `docs/snapshots.md`.
 
 ## Reliability model
 
-Live exchange responses are not required for unit tests. Parser tests use compact fixtures so normal CI remains deterministic, while a separate scheduled/manual GitHub Actions smoke check probes the official sources and fails visibly if an endpoint becomes unavailable or required identity/quote fields drift.
+Live exchange responses are not required for unit tests. Parser tests use compact fixtures so CI stays deterministic, while a separate scheduled/manual GitHub Actions smoke check probes implemented official sources and fails visibly if an endpoint disappears or required fields drift.
 
 Design rules:
 
-- do not copy a holiday table into the package and let it silently go stale;
 - keep network fetching separate from parsing;
-- preserve exact raw payloads when reproducibility matters;
-- allow users to cache official payloads without coupling the core package to a database;
-- keep normal unit tests fixture-based rather than dependent on live exchange uptime;
-- probe official sources periodically so upstream schema changes are noticed;
-- keep unified models narrow and preserve source values such as industry codes instead of guessing labels;
-- preserve `None` when an official closing-price field represents no value instead of inventing a numeric price;
-- never silently overwrite a changed historical snapshot for the same source/date.
+- keep unified models narrow and only map fields with clear meaning;
+- preserve missing values rather than inventing zeroes;
+- preserve source values such as industry codes instead of guessing labels;
+- cache exact raw payloads when reproducibility matters;
+- do not silently overwrite changed historical snapshots;
+- do not ship stale copied holiday tables as if they were authoritative;
+- keep ordinary tests fixture-based rather than dependent on exchange uptime;
+- probe live official sources separately for schema/availability drift.
 
 ## Contribution requirements for new sources
 
 A new source adapter should document:
 
-1. the official publisher and endpoint/page;
+1. official publisher and endpoint/page;
 2. whether the source is current-state or historical;
 3. expected update frequency;
 4. schema stability assumptions;
