@@ -1,5 +1,14 @@
 """Taiwan Market Toolkit public API."""
 
+from .analytics import (
+    OHLCVSummary,
+    SeriesPoint,
+    daily_returns,
+    exponential_moving_average,
+    find_missing_trading_days,
+    simple_moving_average,
+    summarize_ohlcv,
+)
 from .calendar import TaiwanTradingCalendar
 from .normalize import (
     NormalizationResult,
@@ -26,13 +35,18 @@ __all__ = [
     "NormalizedSymbol",
     "NormalizationResult",
     "OHLCVRow",
+    "OHLCVSummary",
+    "SeriesPoint",
     "TWSEHolidayRecord",
     "TaiwanTradingCalendar",
     "ValidationIssue",
     "calendar_from_twse_records",
+    "daily_returns",
     "dataframe_to_ohlcv",
+    "exponential_moving_average",
     "fetch_twse_calendar",
     "fetch_twse_holiday_schedule",
+    "find_missing_trading_days",
     "infer_column_map",
     "normalize_and_validate_ohlcv_records",
     "normalize_ohlcv_records",
@@ -41,6 +55,8 @@ __all__ = [
     "parse_roc_date",
     "parse_twse_holiday_payload",
     "read_ohlcv_csv",
+    "simple_moving_average",
+    "summarize_ohlcv",
     "validate_ohlcv",
 ]
 
