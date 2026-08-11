@@ -40,6 +40,14 @@ TPEx also publishes an official Holiday Schedule section on its website. A dedic
 
 Issue #2 tracks selection and implementation of the most stable authoritative TPEx holiday source. A future adapter should keep HTML/network fetching separate from parsing if the website schedule remains the best official source.
 
+## Reproducible raw snapshots
+
+Current-state APIs are useful for live tooling but do not guarantee that a future request will reproduce the payload seen by a previous research run. The toolkit therefore exposes raw-response fetchers and a local `SnapshotStore`.
+
+`archive_official_closing_snapshot()` preserves the exact official response bytes under deterministic source/date paths and records a SHA-256 digest. Identical repeated writes are idempotent. Different content for an already archived source/date is rejected unless replacement is explicitly requested.
+
+The archive intentionally remains local and separate from the package source tree. Downloaded market payloads are not committed to the repository by default. See `docs/snapshots.md` for the storage and integrity model.
+
 ## Reliability model
 
 Live exchange responses are not required for unit tests. Parser tests use compact fixtures so normal CI remains deterministic, while a separate scheduled/manual GitHub Actions smoke check probes the official sources and fails visibly if the endpoint becomes unavailable or the required schema changes.
@@ -48,10 +56,12 @@ Design rules:
 
 - do not copy a holiday table into the package and let it silently go stale;
 - keep network fetching separate from parsing;
-- allow users to cache exact official payloads for reproducible research;
+- preserve exact raw payloads when reproducibility matters;
+- allow users to cache official payloads without coupling the core package to a database;
 - keep normal unit tests fixture-based rather than dependent on live exchange uptime;
 - probe official sources periodically so upstream schema changes are noticed;
-- preserve `None` when an official closing-price field represents no value instead of inventing a numeric price.
+- preserve `None` when an official closing-price field represents no value instead of inventing a numeric price;
+- never silently overwrite a changed historical snapshot for the same source/date.
 
 ## Contribution requirements for new sources
 

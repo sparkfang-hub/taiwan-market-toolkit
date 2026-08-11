@@ -16,6 +16,7 @@ from .analytics import (
 from .calendar import TaiwanTradingCalendar
 from .normalize import read_ohlcv_csv
 from .quotes import fetch_closing_quote
+from .snapshots import archive_official_closing_snapshot
 from .symbols import normalize_symbol
 from .validation import validate_ohlcv
 
@@ -43,6 +44,19 @@ def _build_parser() -> argparse.ArgumentParser:
     quote.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
     quote.add_argument("--market", choices=_MARKET_CHOICES)
     quote.add_argument("--timeout", type=float, default=10.0)
+
+    archive = subparsers.add_parser(
+        "archive-quotes",
+        help="Fetch and preserve an exact official closing snapshot locally",
+    )
+    archive.add_argument("--market", required=True, choices=_MARKET_CHOICES)
+    archive.add_argument("--root", default="market-data", help="Local archive root directory")
+    archive.add_argument("--timeout", type=float, default=10.0)
+    archive.add_argument(
+        "--replace",
+        action="store_true",
+        help="Explicitly replace different bytes already stored for the same market/date",
+    )
 
     calendar = subparsers.add_parser(
         "calendar",
@@ -122,6 +136,25 @@ def main() -> None:
             "name": result.name,
             "market": result.market.value,
             "close": str(result.close) if result.close is not None else None,
+        }
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+
+    if args.command == "archive-quotes":
+        result = archive_official_closing_snapshot(
+            args.market,
+            args.root,
+            timeout=args.timeout,
+            replace=args.replace,
+        )
+        payload = {
+            "source": result.source,
+            "date": result.date.isoformat(),
+            "path": str(result.path),
+            "sha256": result.sha256,
+            "bytes": result.bytes,
+            "created": result.created,
+            "replaced": result.replaced,
         }
         print(json.dumps(payload, ensure_ascii=False))
         return
