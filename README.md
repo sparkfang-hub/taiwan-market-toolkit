@@ -13,6 +13,7 @@ The project focuses on small, composable building blocks that can be reused in r
 - Normalize records, CSV files, and pandas-like DataFrames into one OHLCV schema.
 - Validate OHLCV rows for malformed prices, negative volume, duplicates, and ordering issues.
 - Use a CLI for symbol, calendar, and CSV validation operations.
+- Expose non-strategy utilities to AI hosts through an optional MCP server.
 - Run automated tests on Python 3.10, 3.11, and 3.12 through GitHub Actions.
 
 ## Installation
@@ -23,6 +24,12 @@ The project is currently in early development. Install directly from a clone:
 git clone https://github.com/sparkfang-hub/taiwan-market-toolkit.git
 cd taiwan-market-toolkit
 python -m pip install -e .
+```
+
+For MCP support:
+
+```bash
+python -m pip install -e '.[mcp]'
 ```
 
 For development:
@@ -162,6 +169,33 @@ tw-market validate prices.csv --no-sort
 
 The `validate` command prints JSON with row count, validity, and individual issues.
 
+## MCP server
+
+The optional MCP server uses the official MCP Python SDK v2 and keeps AI-facing tools separate from private trading logic.
+
+Install the optional dependency and start a local stdio server:
+
+```bash
+python -m pip install -e '.[mcp]'
+tw-market-mcp
+```
+
+The server currently exposes:
+
+- `normalize_taiwan_symbol` — normalize TWSE/TPEx-style tickers;
+- `check_trading_day` — apply weekend rules plus caller-supplied closures/openings;
+- `check_twse_trading_day` — query the official TWSE OpenAPI schedule;
+- `validate_ohlcv_csv_text` — normalize and validate CSV-formatted OHLCV data;
+- `taiwan-market://about` — describe the project scope and safety boundary.
+
+The core MCP tools require no brokerage credentials and provide no order execution. The TWSE calendar tool performs a read-only request to the public TWSE OpenAPI endpoint.
+
+For development, the official MCP Inspector can load the server module:
+
+```bash
+mcp dev src/taiwan_market_toolkit/mcp_server.py --with-editable .
+```
+
 ## Project scope
 
 Taiwan Market Toolkit is infrastructure, not a trading strategy. The project aims to make Taiwan-market data easier to normalize, validate, query, and expose to other software.
@@ -172,7 +206,7 @@ Planned areas include:
 - market metadata and security-master helpers;
 - data-source adapters with explicit licensing and provenance;
 - richer validation and anomaly reporting;
-- optional MCP tools for AI-agent workflows.
+- additional read-only MCP tools around stable toolkit capabilities.
 
 The project does not provide investment advice, trading signals, portfolio recommendations, or guaranteed market-data accuracy.
 
