@@ -22,6 +22,7 @@ from .directory import (
     find_company,
     search_company_directory,
 )
+from .history import HistoricalPrice, fetch_price_history
 from .normalize import parse_ohlcv_csv
 from .overview import SecurityOverview, fetch_security_overview
 from .quotes import ClosingQuote, fetch_closing_quote
@@ -73,6 +74,23 @@ def _valuation_payload(metrics: ValuationMetrics) -> dict[str, Any]:
     }
 
 
+def _history_payload(item: HistoricalPrice) -> dict[str, Any]:
+    return {
+        "date": item.date.isoformat(),
+        "market": item.market.value,
+        "code": item.code,
+        "open": str(item.open) if item.open is not None else None,
+        "high": str(item.high) if item.high is not None else None,
+        "low": str(item.low) if item.low is not None else None,
+        "close": str(item.close) if item.close is not None else None,
+        "volume": item.volume,
+        "trade_value": item.trade_value,
+        "change": str(item.change) if item.change is not None else None,
+        "transactions": item.transactions,
+        "source": item.source,
+    }
+
+
 def _overview_payload(overview: SecurityOverview) -> dict[str, Any]:
     return {
         "code": overview.code,
@@ -98,9 +116,9 @@ def create_mcp_server():
         version="0.1.0",
         instructions=(
             "Utilities for Taiwan market symbols, official company metadata, read-only "
-            "closing quotes and valuation metrics, trading calendars, OHLCV data quality, "
-            "and strategy-neutral descriptive analytics. This server does not provide "
-            "trading signals, recommendations, or order execution."
+            "closing quotes, historical prices and valuation metrics, trading calendars, "
+            "OHLCV data quality, and strategy-neutral descriptive analytics. This server "
+            "does not provide trading signals, recommendations, or order execution."
         ),
     )
 
@@ -151,6 +169,43 @@ def create_mcp_server():
     ) -> dict[str, Any]:
         """Fetch a read-only closing quote from the relevant official exchange OpenAPI."""
         return _quote_payload(fetch_closing_quote(value, market, timeout=timeout))
+
+    @server.tool()
+    def get_official_price_history(
+        value: str,
+        start: str,
+        end: str,
+        market: str | None = None,
+        timeout: float = 10.0,
+        max_rows: int = 520,
+    ) -> dict[str, Any]:
+        """Fetch bounded official daily history for a four-digit common equity.
+
+        MCP requests are limited to at most 24 calendar months and 1,000 returned
+        rows so an agent cannot accidentally create an unbounded exchange crawl.
+        """
+        if max_rows <= 0 or max_rows > 1000:
+            raise ValueError("max_rows must be between 1 and 1000")
+        start_date = date.fromisoformat(start)
+        end_date = date.fromisoformat(end)
+        prices = fetch_price_history(
+            value,
+            market,
+            start=start_date,
+            end=end_date,
+            timeout=timeout,
+            max_months=24,
+        )
+        if len(prices) > max_rows:
+            raise ValueError(
+                f"history returned {len(prices)} rows; narrow the date range or raise max_rows"
+            )
+        return {
+            "rows": len(prices),
+            "start": prices[0].date.isoformat() if prices else None,
+            "end": prices[-1].date.isoformat() if prices else None,
+            "data": [_history_payload(item) for item in prices],
+        }
 
     @server.tool()
     def get_official_valuation_metrics(
@@ -259,9 +314,9 @@ def create_mcp_server():
         return (
             "Taiwan Market Toolkit provides non-strategy infrastructure for Taiwan market "
             "symbol normalization, official company identity metadata, read-only closing "
-            "quotes and valuation metrics, exchange-calendar queries, OHLCV data validation, "
-            "and descriptive analytics. It does not provide investment advice, trading "
-            "signals, or order execution."
+            "quotes, bounded common-equity historical prices and valuation metrics, "
+            "exchange-calendar queries, OHLCV data validation, and descriptive analytics. "
+            "It does not provide investment advice, trading signals, or order execution."
         )
 
     return server
