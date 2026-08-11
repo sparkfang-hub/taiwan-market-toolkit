@@ -50,6 +50,15 @@ from .twse import (
     parse_twse_holiday_payload,
 )
 from .validation import OHLCVRow, ValidationIssue, validate_ohlcv
+from .valuation import (
+    ValuationMetrics,
+    fetch_tpex_valuation,
+    fetch_twse_valuation,
+    fetch_valuation_metrics,
+    find_valuation,
+    parse_tpex_valuation,
+    parse_twse_valuation,
+)
 
 __all__ = [
     "ClosingQuote",
@@ -65,6 +74,7 @@ __all__ = [
     "TWSEHolidayRecord",
     "TaiwanTradingCalendar",
     "ValidationIssue",
+    "ValuationMetrics",
     "archive_official_closing_snapshot",
     "calendar_from_twse_records",
     "daily_returns",
@@ -75,13 +85,17 @@ __all__ = [
     "fetch_tpex_closing_payload",
     "fetch_tpex_closing_quotes",
     "fetch_tpex_company_directory",
+    "fetch_tpex_valuation",
     "fetch_twse_calendar",
     "fetch_twse_closing_payload",
     "fetch_twse_closing_quotes",
     "fetch_twse_company_directory",
     "fetch_twse_holiday_schedule",
+    "fetch_twse_valuation",
+    "fetch_valuation_metrics",
     "find_company",
     "find_missing_trading_days",
+    "find_valuation",
     "infer_column_map",
     "normalize_and_validate_ohlcv_records",
     "normalize_market",
@@ -91,9 +105,11 @@ __all__ = [
     "parse_roc_date",
     "parse_tpex_closing_quotes",
     "parse_tpex_company_directory",
+    "parse_tpex_valuation",
     "parse_twse_closing_quotes",
     "parse_twse_company_directory",
     "parse_twse_holiday_payload",
+    "parse_twse_valuation",
     "read_ohlcv_csv",
     "search_company_directory",
     "simple_moving_average",
