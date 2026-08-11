@@ -15,9 +15,10 @@ All notable changes to this project will be documented here.
 - Traditional Chinese OHLCV column aliases for common Taiwan-market CSV schemas.
 - ROC-calendar date support for normalized OHLCV records and CSV input.
 - OHLCV validation for price invariants, volume, duplicates, and ordering.
-- Command-line interface for symbol, calendar, and CSV validation utilities.
+- Strategy-neutral OHLCV analytics: SMA, EMA, one-period returns, summaries, and trading-day gap detection.
+- Command-line interface for symbol, calendar, CSV validation, and descriptive analysis utilities.
 - Optional MCP server using the official MCP Python SDK v2.
-- MCP tools for symbol normalization, trading-day checks, and OHLCV CSV validation.
+- MCP tools for symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
 - Runnable examples for Chinese CSV input, TWSE calendar queries, and MCP clients.
 - PyPI Trusted Publishing workflow and a documented release checklist.
 - Distribution build and metadata validation in CI.

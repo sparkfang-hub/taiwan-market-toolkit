@@ -51,3 +51,25 @@ async def test_mcp_validate_csv(mcp_client):
     assert not result.is_error
     assert result.structured_content["valid"] is False
     assert result.structured_content["issues"][0]["code"] == "invalid_high"
+
+
+@pytest.mark.anyio
+async def test_mcp_analyze_csv(mcp_client):
+    csv_text = """交易日期,開盤價,最高價,最低價,收盤價,成交股數
+115/08/10,100,100,100,100,10
+115/08/11,110,110,110,110,20
+115/08/12,121,121,121,121,30
+"""
+    result = await mcp_client.call_tool(
+        "analyze_ohlcv_csv_text",
+        {
+            "csv_text": csv_text,
+            "sma_windows": [2],
+            "ema_windows": [2],
+        },
+    )
+    assert not result.is_error
+    assert result.structured_content["rows"] == 3
+    assert result.structured_content["latest_return"] == "0.1"
+    assert result.structured_content["sma"]["2"] == "115.5"
+    assert result.structured_content["ema"]["2"] == "115.6666666666666666666666667"

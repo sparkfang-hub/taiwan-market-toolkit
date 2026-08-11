@@ -5,7 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 from datetime import date
+from decimal import Decimal
 
+from .analytics import (
+    daily_returns,
+    exponential_moving_average,
+    simple_moving_average,
+    summarize_ohlcv,
+)
 from .calendar import TaiwanTradingCalendar
 from .normalize import read_ohlcv_csv
 from .symbols import normalize_symbol
@@ -52,7 +59,37 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Preserve CSV row order so out-of-order rows are reported",
     )
 
+    analyze = subparsers.add_parser(
+        "analyze",
+        help="Summarize an OHLCV CSV and optionally calculate moving averages",
+    )
+    analyze.add_argument("path")
+    analyze.add_argument(
+        "--sma",
+        type=int,
+        action="append",
+        default=[],
+        metavar="WINDOW",
+        help="Calculate the latest simple moving average for a window; repeatable",
+    )
+    analyze.add_argument(
+        "--ema",
+        type=int,
+        action="append",
+        default=[],
+        metavar="WINDOW",
+        help="Calculate the latest exponential moving average for a window; repeatable",
+    )
+
     return parser
+
+
+def _json_value(value: Decimal | date | None) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)
 
 
 def main() -> None:
@@ -91,6 +128,34 @@ def main() -> None:
                 for issue in issues
             ],
         }
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+
+    if args.command == "analyze":
+        rows = read_ohlcv_csv(args.path)
+        summary = summarize_ohlcv(rows)
+        returns = daily_returns(rows)
+
+        payload = {
+            "rows": summary.rows,
+            "start": _json_value(summary.start),
+            "end": _json_value(summary.end),
+            "min_close": _json_value(summary.min_close),
+            "max_close": _json_value(summary.max_close),
+            "total_volume": summary.total_volume,
+            "latest_return": _json_value(returns[-1].value) if returns else None,
+            "sma": {},
+            "ema": {},
+        }
+
+        for window in args.sma:
+            points = simple_moving_average(rows, window)
+            payload["sma"][str(window)] = _json_value(points[-1].value) if points else None
+
+        for window in args.ema:
+            points = exponential_moving_average(rows, window)
+            payload["ema"][str(window)] = _json_value(points[-1].value) if points else None
+
         print(json.dumps(payload, ensure_ascii=False))
         return
 
