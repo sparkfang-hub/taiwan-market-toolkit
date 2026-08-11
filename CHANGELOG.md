@@ -14,6 +14,9 @@ All notable changes to this project will be documented here.
 - `tw-market valuation` command and MCP valuation tool.
 - `SecurityOverview` convenience layer combining official company identity, closing quote, and valuation data while preserving independent source dates.
 - `tw-market overview` command and `get_official_security_overview` MCP tool.
+- Unified `MarketSnapshotRow` batch view that left-joins the official company universe with closing quotes and valuation metrics while preserving independent source dates.
+- Market-snapshot coverage summaries that make missing quote or valuation rows explicit instead of dropping listed companies.
+- `tw-market market-snapshot` command with both-market or single-market selection, JSON summaries, and UTF-8 CSV export.
 - Official monthly TWSE/TPEx historical daily-price adapters for ordinary four-digit common equities.
 - Common `HistoricalPrice` model with source, OHLC, normalized share volume, trade value, change, and transaction count.
 - Conservative monthly historical fetching with pacing, retry/backoff, request-span guards, and date-range filtering.
@@ -39,7 +42,7 @@ All notable changes to this project will be documented here.
 - ROC-calendar date support for normalized OHLCV records and CSV input.
 - OHLCV validation for price invariants, volume, duplicates, and ordering.
 - Strategy-neutral OHLCV analytics: SMA, EMA, one-period returns, summaries, and trading-day gap detection.
-- Command-line interface for company lookup/search, symbol, quote, valuation, overview, historical prices, local archiving, calendar, CSV validation, and descriptive analysis utilities.
+- Command-line interface for company lookup/search, symbol, quote, valuation, overview, market snapshots, historical prices, local archiving, calendar, CSV validation, and descriptive analysis utilities.
 - Optional MCP server using the official MCP Python SDK v2.
 - MCP tools for official security overview, company profiles/search, closing quotes, bounded historical prices, valuation metrics, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
 - Runnable examples for Chinese CSV input, TWSE calendar queries, official history, local snapshot archiving, and MCP clients.
