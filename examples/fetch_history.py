@@ -4,7 +4,6 @@ from datetime import date
 
 import taiwan_market_toolkit as tmt
 
-
 prices = tmt.fetch_price_history(
     "2330.TW",
     start=date(2026, 7, 1),
