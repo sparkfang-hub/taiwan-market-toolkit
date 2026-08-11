@@ -4,6 +4,14 @@ Taiwan Market Toolkit prefers authoritative public sources and keeps fetching se
 
 ## Taiwan Stock Exchange (TWSE)
 
+### Listed-company basic data
+
+Implemented source:
+
+`https://openapi.twse.com.tw/v1/opendata/t187ap03_L`
+
+The toolkit maps stable identity fields such as company code, company name, abbreviation, English name, industry code, and listing date into the common `SecurityProfile` model. Exchange-specific disclosure fields remain outside the common model.
+
 ### Holiday schedule
 
 Implemented source:
@@ -25,6 +33,14 @@ The toolkit reads the common snapshot fields `Date`, `Code`, `Name`, and `Closin
 TPEx operates an official OpenAPI platform at:
 
 `https://www.tpex.org.tw/openapi/`
+
+### Main-board company basic data
+
+Implemented source:
+
+`https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O`
+
+The toolkit maps TPEx company-code, company-name, abbreviation, English symbol/name, industry code, and listing-date fields into the same `SecurityProfile` model used for TWSE identities. This unification is intentionally limited to fields with clear shared semantics.
 
 ### Current main-board closing snapshot
 
@@ -50,7 +66,7 @@ The archive intentionally remains local and separate from the package source tre
 
 ## Reliability model
 
-Live exchange responses are not required for unit tests. Parser tests use compact fixtures so normal CI remains deterministic, while a separate scheduled/manual GitHub Actions smoke check probes the official sources and fails visibly if the endpoint becomes unavailable or the required schema changes.
+Live exchange responses are not required for unit tests. Parser tests use compact fixtures so normal CI remains deterministic, while a separate scheduled/manual GitHub Actions smoke check probes the official sources and fails visibly if an endpoint becomes unavailable or required identity/quote fields drift.
 
 Design rules:
 
@@ -60,6 +76,7 @@ Design rules:
 - allow users to cache official payloads without coupling the core package to a database;
 - keep normal unit tests fixture-based rather than dependent on live exchange uptime;
 - probe official sources periodically so upstream schema changes are noticed;
+- keep unified models narrow and preserve source values such as industry codes instead of guessing labels;
 - preserve `None` when an official closing-price field represents no value instead of inventing a numeric price;
 - never silently overwrite a changed historical snapshot for the same source/date.
 
