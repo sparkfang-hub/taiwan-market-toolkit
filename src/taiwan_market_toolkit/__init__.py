@@ -19,6 +19,14 @@ from .normalize import (
     parse_ohlcv_csv,
     read_ohlcv_csv,
 )
+from .quotes import (
+    ClosingQuote,
+    fetch_closing_quote,
+    fetch_tpex_closing_quotes,
+    fetch_twse_closing_quotes,
+    parse_tpex_closing_quotes,
+    parse_twse_closing_quotes,
+)
 from .symbols import Market, NormalizedSymbol, normalize_symbol
 from .twse import (
     TWSEHolidayRecord,
@@ -31,6 +39,7 @@ from .twse import (
 from .validation import OHLCVRow, ValidationIssue, validate_ohlcv
 
 __all__ = [
+    "ClosingQuote",
     "Market",
     "NormalizedSymbol",
     "NormalizationResult",
@@ -44,7 +53,10 @@ __all__ = [
     "daily_returns",
     "dataframe_to_ohlcv",
     "exponential_moving_average",
+    "fetch_closing_quote",
+    "fetch_tpex_closing_quotes",
     "fetch_twse_calendar",
+    "fetch_twse_closing_quotes",
     "fetch_twse_holiday_schedule",
     "find_missing_trading_days",
     "infer_column_map",
@@ -53,6 +65,8 @@ __all__ = [
     "normalize_symbol",
     "parse_ohlcv_csv",
     "parse_roc_date",
+    "parse_tpex_closing_quotes",
+    "parse_twse_closing_quotes",
     "parse_twse_holiday_payload",
     "read_ohlcv_csv",
     "simple_moving_average",

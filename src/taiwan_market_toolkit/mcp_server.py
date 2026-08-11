@@ -17,6 +17,7 @@ from .analytics import (
 )
 from .calendar import TaiwanTradingCalendar
 from .normalize import parse_ohlcv_csv
+from .quotes import fetch_closing_quote
 from .symbols import normalize_symbol
 from .twse import fetch_twse_calendar
 from .validation import validate_ohlcv
@@ -35,9 +36,9 @@ def create_mcp_server():
         "Taiwan Market Toolkit",
         version="0.1.0",
         instructions=(
-            "Utilities for Taiwan market symbols, trading calendars, OHLCV data quality, "
-            "and strategy-neutral descriptive analytics. This server does not provide "
-            "trading signals, recommendations, or order execution."
+            "Utilities for Taiwan market symbols, official read-only closing quotes, trading "
+            "calendars, OHLCV data quality, and strategy-neutral descriptive analytics. This "
+            "server does not provide trading signals, recommendations, or order execution."
         ),
     )
 
@@ -49,6 +50,22 @@ def create_mcp_server():
             "code": result.code,
             "market": result.market.value if result.market else None,
             "yahoo": result.yahoo,
+        }
+
+    @server.tool()
+    def get_official_closing_quote(
+        value: str,
+        market: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        """Fetch a read-only closing quote from the relevant official exchange OpenAPI."""
+        result = fetch_closing_quote(value, market, timeout=timeout)
+        return {
+            "date": result.date.isoformat(),
+            "code": result.code,
+            "name": result.name,
+            "market": result.market.value,
+            "close": str(result.close) if result.close is not None else None,
         }
 
     @server.tool()
@@ -139,9 +156,9 @@ def create_mcp_server():
         """Describe the scope and safety boundary of the toolkit."""
         return (
             "Taiwan Market Toolkit provides non-strategy infrastructure for Taiwan market "
-            "symbol normalization, exchange-calendar queries, OHLCV data validation, and "
-            "descriptive analytics. It does not provide investment advice, trading signals, "
-            "or order execution."
+            "symbol normalization, official read-only closing quotes, exchange-calendar "
+            "queries, OHLCV data validation, and descriptive analytics. It does not provide "
+            "investment advice, trading signals, or order execution."
         )
 
     return server

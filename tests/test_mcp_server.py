@@ -1,7 +1,12 @@
+from datetime import date
+from decimal import Decimal
+
 import pytest
 from mcp import Client
 
 from taiwan_market_toolkit.mcp_server import create_mcp_server
+from taiwan_market_toolkit.quotes import ClosingQuote
+from taiwan_market_toolkit.symbols import Market
 
 
 @pytest.fixture
@@ -24,6 +29,37 @@ async def test_mcp_normalize_symbol(mcp_client):
     assert not result.is_error
     assert result.structured_content["code"] == "2330"
     assert result.structured_content["market"] == "TWSE"
+
+
+@pytest.mark.anyio
+async def test_mcp_official_closing_quote(mcp_client, monkeypatch):
+    def fake_fetch(value, market, *, timeout):
+        assert value == "2330.TW"
+        assert market is None
+        assert timeout == 2.0
+        return ClosingQuote(
+            market=Market.TWSE,
+            date=date(2026, 8, 11),
+            code="2330",
+            name="台積電",
+            close=Decimal("1005"),
+        )
+
+    monkeypatch.setattr("taiwan_market_toolkit.mcp_server.fetch_closing_quote", fake_fetch)
+
+    result = await mcp_client.call_tool(
+        "get_official_closing_quote",
+        {"value": "2330.TW", "timeout": 2.0},
+    )
+
+    assert not result.is_error
+    assert result.structured_content == {
+        "date": "2026-08-11",
+        "code": "2330",
+        "name": "台積電",
+        "market": "TWSE",
+        "close": "1005",
+    }
 
 
 @pytest.mark.anyio
