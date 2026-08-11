@@ -16,11 +16,30 @@ from .analytics import (
     summarize_ohlcv,
 )
 from .calendar import TaiwanTradingCalendar
+from .directory import (
+    SecurityProfile,
+    fetch_company_directory,
+    find_company,
+    search_company_directory,
+)
 from .normalize import parse_ohlcv_csv
 from .quotes import fetch_closing_quote
-from .symbols import normalize_symbol
+from .symbols import Market, normalize_symbol
 from .twse import fetch_twse_calendar
 from .validation import validate_ohlcv
+
+
+def _profile_payload(profile: SecurityProfile) -> dict[str, Any]:
+    return {
+        "code": profile.code,
+        "market": profile.market.value,
+        "yahoo": profile.yahoo,
+        "name": profile.name,
+        "short_name": profile.short_name,
+        "english_name": profile.english_name,
+        "industry": profile.industry,
+        "listing_date": profile.listing_date.isoformat() if profile.listing_date else None,
+    }
 
 
 def create_mcp_server():
@@ -36,9 +55,10 @@ def create_mcp_server():
         "Taiwan Market Toolkit",
         version="0.1.0",
         instructions=(
-            "Utilities for Taiwan market symbols, official read-only closing quotes, trading "
-            "calendars, OHLCV data quality, and strategy-neutral descriptive analytics. This "
-            "server does not provide trading signals, recommendations, or order execution."
+            "Utilities for Taiwan market symbols, official company metadata, read-only "
+            "closing quotes, trading calendars, OHLCV data quality, and strategy-neutral "
+            "descriptive analytics. This server does not provide trading signals, "
+            "recommendations, or order execution."
         ),
     )
 
@@ -51,6 +71,35 @@ def create_mcp_server():
             "market": result.market.value if result.market else None,
             "yahoo": result.yahoo,
         }
+
+    @server.tool()
+    def get_official_company_profile(
+        value: str,
+        market: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        """Fetch one company profile from the official TWSE or TPEx directory."""
+        return _profile_payload(find_company(value, market, timeout=timeout))
+
+    @server.tool()
+    def search_official_company_directory(
+        query: str,
+        market: str | None = None,
+        limit: int = 20,
+        timeout: float = 10.0,
+    ) -> list[dict[str, Any]]:
+        """Search official TWSE/TPEx company identity metadata by code or name."""
+        profiles = fetch_company_directory(timeout=timeout)
+        resolved_market = Market(market) if market else None
+        return [
+            _profile_payload(profile)
+            for profile in search_company_directory(
+                profiles,
+                query,
+                market=resolved_market,
+                limit=limit,
+            )
+        ]
 
     @server.tool()
     def get_official_closing_quote(
@@ -156,9 +205,10 @@ def create_mcp_server():
         """Describe the scope and safety boundary of the toolkit."""
         return (
             "Taiwan Market Toolkit provides non-strategy infrastructure for Taiwan market "
-            "symbol normalization, official read-only closing quotes, exchange-calendar "
-            "queries, OHLCV data validation, and descriptive analytics. It does not provide "
-            "investment advice, trading signals, or order execution."
+            "symbol normalization, official company identity metadata, read-only closing "
+            "quotes, exchange-calendar queries, OHLCV data validation, and descriptive "
+            "analytics. It does not provide investment advice, trading signals, or order "
+            "execution."
         )
 
     return server
