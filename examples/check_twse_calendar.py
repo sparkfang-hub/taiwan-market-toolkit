@@ -4,7 +4,6 @@ from datetime import date
 
 from taiwan_market_toolkit import fetch_twse_calendar
 
-
 calendar = fetch_twse_calendar()
 target = date.today()
 
