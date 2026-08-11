@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "sparkfang-hub"}]
-keywords = ["taiwan", "stocks", "market-data", "ohlcv", "quant", "twse", "tpex"]
+keywords = ["taiwan", "stocks", "market-data", "ohlcv", "quant", "twse", "tpex", "mcp"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
@@ -24,13 +24,18 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
+mcp = [
+  "mcp>=2,<3",
+]
 dev = [
+  "mcp>=2,<3",
   "pytest>=8.0",
   "ruff>=0.6",
 ]
 
 [project.scripts]
 tw-market = "taiwan_market_toolkit.cli:main"
+tw-market-mcp = "taiwan_market_toolkit.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/taiwan_market_toolkit"]
