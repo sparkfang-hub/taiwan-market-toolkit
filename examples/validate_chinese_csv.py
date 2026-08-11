@@ -4,7 +4,6 @@ from pathlib import Path
 
 from taiwan_market_toolkit import read_ohlcv_csv, validate_ohlcv
 
-
 sample = Path(__file__).with_name("sample_ohlcv_zh.csv")
 rows = read_ohlcv_csv(sample)
 issues = validate_ohlcv(rows)
