@@ -17,8 +17,12 @@ All notable changes to this project will be documented here.
 - Official monthly TWSE/TPEx historical daily-price adapters for ordinary four-digit common equities.
 - Common `HistoricalPrice` model with source, OHLC, normalized share volume, trade value, change, and transaction count.
 - Conservative monthly historical fetching with pacing, retry/backoff, request-span guards, and date-range filtering.
+- Exact-byte historical response cache with deterministic market/security/month paths and SHA-256 verification.
+- Completed-month cache reuse plus explicit refresh behavior while keeping the current month live.
+- Raw TWSE/TPEx historical response fetchers so caching and parsing remain separate.
 - `history_to_ohlcv` integration so official exchange history can feed the existing validation and analytics pipeline.
 - `tw-market history` command with JSON output or normalized UTF-8 CSV export.
+- `tw-market history --cache-dir` and `--refresh` controls for reproducible, source-friendly history workflows.
 - Bounded `get_official_price_history` MCP tool with 24-month and 1,000-row safety limits.
 - Runnable official-history example that feeds the returned rows into SMA calculation.
 - Lightweight trading-calendar helpers with explicit closure/opening support.
