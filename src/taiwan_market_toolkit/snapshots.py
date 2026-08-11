@@ -41,7 +41,9 @@ class SnapshotWriteResult:
 def _source_parts(source: str) -> tuple[str, ...]:
     normalized = source.strip().replace("\\", "/")
     parts = tuple(part for part in normalized.split("/") if part)
-    if not parts or any(part in {".", ".."} or not _SOURCE_PART.fullmatch(part) for part in parts):
+    if not parts or any(
+        part in {".", ".."} or not _SOURCE_PART.fullmatch(part) for part in parts
+    ):
         raise ValueError(f"unsafe snapshot source: {source!r}")
     return parts
 
@@ -65,7 +67,11 @@ class SnapshotStore:
 
     def path_for(self, source: str, day: date) -> Path:
         """Return the deterministic path for a source/date pair."""
-        return self.root.joinpath(*_source_parts(source), f"{day.year:04d}", f"{day.isoformat()}.json")
+        return self.root.joinpath(
+            *_source_parts(source),
+            f"{day.year:04d}",
+            f"{day.isoformat()}.json",
+        )
 
     def put(
         self,
@@ -84,8 +90,9 @@ class SnapshotStore:
         destination = self.path_for(source, day)
         digest = hashlib.sha256(data).hexdigest()
         destination.parent.mkdir(parents=True, exist_ok=True)
+        existed = destination.exists()
 
-        if destination.exists():
+        if existed:
             existing = destination.read_bytes()
             if existing == data:
                 return SnapshotWriteResult(
@@ -112,8 +119,8 @@ class SnapshotStore:
             path=destination,
             sha256=digest,
             bytes=len(data),
-            created=not destination.exists() if False else not replace,
-            replaced=replace,
+            created=not existed,
+            replaced=existed and replace,
         )
 
     def read(self, source: str, day: date) -> bytes:
