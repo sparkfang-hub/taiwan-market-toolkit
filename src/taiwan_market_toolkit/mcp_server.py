@@ -23,7 +23,8 @@ from .directory import (
     search_company_directory,
 )
 from .normalize import parse_ohlcv_csv
-from .quotes import fetch_closing_quote
+from .overview import SecurityOverview, fetch_security_overview
+from .quotes import ClosingQuote, fetch_closing_quote
 from .symbols import normalize_market, normalize_symbol
 from .twse import fetch_twse_calendar
 from .validation import validate_ohlcv
@@ -43,6 +44,16 @@ def _profile_payload(profile: SecurityProfile) -> dict[str, Any]:
     }
 
 
+def _quote_payload(quote: ClosingQuote) -> dict[str, Any]:
+    return {
+        "date": quote.date.isoformat(),
+        "code": quote.code,
+        "name": quote.name,
+        "market": quote.market.value,
+        "close": str(quote.close) if quote.close is not None else None,
+    }
+
+
 def _valuation_payload(metrics: ValuationMetrics) -> dict[str, Any]:
     return {
         "date": metrics.date.isoformat(),
@@ -59,6 +70,17 @@ def _valuation_payload(metrics: ValuationMetrics) -> dict[str, Any]:
         "dividend_per_share": (
             str(metrics.dividend_per_share) if metrics.dividend_per_share is not None else None
         ),
+    }
+
+
+def _overview_payload(overview: SecurityOverview) -> dict[str, Any]:
+    return {
+        "code": overview.code,
+        "market": overview.market.value,
+        "yahoo": overview.yahoo,
+        "profile": _profile_payload(overview.profile),
+        "quote": _quote_payload(overview.quote),
+        "valuation": _valuation_payload(overview.valuation),
     }
 
 
@@ -128,14 +150,7 @@ def create_mcp_server():
         timeout: float = 10.0,
     ) -> dict[str, Any]:
         """Fetch a read-only closing quote from the relevant official exchange OpenAPI."""
-        result = fetch_closing_quote(value, market, timeout=timeout)
-        return {
-            "date": result.date.isoformat(),
-            "code": result.code,
-            "name": result.name,
-            "market": result.market.value,
-            "close": str(result.close) if result.close is not None else None,
-        }
+        return _quote_payload(fetch_closing_quote(value, market, timeout=timeout))
 
     @server.tool()
     def get_official_valuation_metrics(
@@ -145,6 +160,15 @@ def create_mcp_server():
     ) -> dict[str, Any]:
         """Fetch official P/E, dividend yield, and P/B metrics for one security."""
         return _valuation_payload(find_valuation(value, market, timeout=timeout))
+
+    @server.tool()
+    def get_official_security_overview(
+        value: str,
+        market: str | None = None,
+        timeout: float = 10.0,
+    ) -> dict[str, Any]:
+        """Compose official company, closing quote, and valuation data for one security."""
+        return _overview_payload(fetch_security_overview(value, market, timeout=timeout))
 
     @server.tool()
     def check_trading_day(
