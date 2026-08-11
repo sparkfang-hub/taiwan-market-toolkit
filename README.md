@@ -10,8 +10,9 @@ The project focuses on small, composable building blocks that can be reused in r
 - Represent TWSE and TPEx market identifiers consistently.
 - Query a Taiwan trading calendar with explicit closure/opening overrides.
 - Fetch and parse the official TWSE market holiday schedule from TWSE OpenAPI.
+- Normalize records, CSV files, and pandas-like DataFrames into one OHLCV schema.
 - Validate OHLCV rows for malformed prices, negative volume, duplicates, and ordering issues.
-- Use a small CLI for symbol and calendar operations.
+- Use a CLI for symbol, calendar, and CSV validation operations.
 - Run automated tests on Python 3.10, 3.11, and 3.12 through GitHub Actions.
 
 ## Installation
@@ -98,26 +99,56 @@ Source: Taiwan Stock Exchange OpenAPI, `holidaySchedule/holidaySchedule`.
 
 The provider deliberately does not maintain a copied hard-coded holiday table. The official response remains the source of truth, while applications that require reproducible historical runs should cache the exact payload they used.
 
+### Normalize OHLCV data
+
+Common column aliases are detected automatically:
+
+```python
+from taiwan_market_toolkit import normalize_ohlcv_records
+
+rows = normalize_ohlcv_records(
+    [
+        {
+            "Trading Date": "2026/08/11",
+            "Open Price": "101.5",
+            "High Price": "110",
+            "Low Price": "100",
+            "Close": "108.5",
+            "Vol": "1,200",
+        }
+    ]
+)
+```
+
+For unusual source schemas, pass an explicit mapping from canonical names to source columns:
+
+```python
+rows = normalize_ohlcv_records(
+    records,
+    column_map={
+        "date": "交易日期",
+        "open": "開盤價",
+        "high": "最高價",
+        "low": "最低價",
+        "close": "收盤價",
+        "volume": "成交股數",
+    },
+)
+```
+
+CSV text/files and pandas-like DataFrames are also supported through `parse_ohlcv_csv`, `read_ohlcv_csv`, and `dataframe_to_ohlcv`. Pandas is not a required dependency.
+
 ### Validate OHLCV data
 
 ```python
-from datetime import date
-from decimal import Decimal
-from taiwan_market_toolkit import OHLCVRow, validate_ohlcv
+from taiwan_market_toolkit import normalize_and_validate_ohlcv_records
 
-rows = [
-    OHLCVRow(
-        date=date(2026, 8, 10),
-        open=Decimal("100"),
-        high=Decimal("110"),
-        low=Decimal("95"),
-        close=Decimal("105"),
-        volume=1000,
-    )
-]
-
-issues = validate_ohlcv(rows)
+result = normalize_and_validate_ohlcv_records(records)
+for issue in result.issues:
+    print(issue.code, issue.message)
 ```
+
+Validation checks OHLC price invariants, negative volume, duplicate dates, and chronological ordering. Normalization and validation are intentionally separate so callers can choose whether to sort input before checking it.
 
 ### CLI
 
@@ -125,7 +156,11 @@ issues = validate_ohlcv(rows)
 tw-market symbol 2330.TW
 tw-market symbol 6488 --market TPEX
 tw-market calendar 2026-08-07 --next
+tw-market validate prices.csv
+tw-market validate prices.csv --no-sort
 ```
+
+The `validate` command prints JSON with row count, validity, and individual issues.
 
 ## Project scope
 
@@ -134,7 +169,6 @@ Taiwan Market Toolkit is infrastructure, not a trading strategy. The project aim
 Planned areas include:
 
 - richer TWSE/TPEx trading-calendar providers and caching;
-- tabular OHLCV normalization;
 - market metadata and security-master helpers;
 - data-source adapters with explicit licensing and provenance;
 - richer validation and anomaly reporting;
