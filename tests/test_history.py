@@ -3,15 +3,7 @@ from decimal import Decimal
 
 import pytest
 
-from taiwan_market_toolkit.history import (
-    HistoricalPrice,
-    HistoricalPriceError,
-    fetch_price_history,
-    history_to_ohlcv,
-    parse_tpex_history,
-    parse_twse_history,
-    write_history_csv,
-)
+from taiwan_market_toolkit import history
 from taiwan_market_toolkit.symbols import Market
 
 
@@ -41,10 +33,10 @@ TPEX_PAYLOAD = """{
 
 
 def test_parse_twse_history_normalizes_month_rows():
-    prices = parse_twse_history(TWSE_PAYLOAD, "2330")
+    prices = history.parse_twse_history(TWSE_PAYLOAD, "2330")
 
     assert len(prices) == 2
-    assert prices[0] == HistoricalPrice(
+    assert prices[0] == history.HistoricalPrice(
         market=Market.TWSE,
         code="2330",
         date=date(2026, 8, 10),
@@ -61,7 +53,7 @@ def test_parse_twse_history_normalizes_month_rows():
 
 
 def test_parse_tpex_history_converts_common_stock_lots_and_thousands():
-    prices = parse_tpex_history(TPEX_PAYLOAD, "6488")
+    prices = history.parse_tpex_history(TPEX_PAYLOAD, "6488")
 
     assert prices[0].market is Market.TPEx
     assert prices[0].date == date(2026, 8, 10)
@@ -73,22 +65,22 @@ def test_parse_tpex_history_converts_common_stock_lots_and_thousands():
 
 def test_history_rejects_non_equity_code_to_avoid_wrong_lot_conversion():
     with pytest.raises(ValueError, match="four-digit"):
-        parse_tpex_history(TPEX_PAYLOAD, "00679B")
+        history.parse_tpex_history(TPEX_PAYLOAD, "00679B")
 
 
 def test_history_parser_returns_empty_for_official_no_data_message():
-    assert parse_twse_history('{"stat":"很抱歉，沒有符合條件的資料!"}', "2330") == []
-    assert parse_tpex_history('{"stat":"查無資料","tables":[]}', "6488") == []
+    assert history.parse_twse_history('{"stat":"很抱歉，沒有符合條件的資料!"}', "2330") == []
+    assert history.parse_tpex_history('{"stat":"查無資料","tables":[]}', "6488") == []
 
 
 def test_history_parser_detects_schema_drift():
-    with pytest.raises(HistoricalPriceError, match="schema may have changed"):
-        parse_twse_history('{"stat":"OK","data":[["bad"]]}', "2330")
+    with pytest.raises(history.HistoricalPriceError, match="schema may have changed"):
+        history.parse_twse_history('{"stat":"OK","data":[["bad"]]}', "2330")
 
 
 def test_history_to_ohlcv_skips_incomplete_rows_by_default():
-    complete, incomplete = parse_twse_history(TWSE_PAYLOAD, "2330")
-    incomplete = HistoricalPrice(
+    complete, incomplete = history.parse_twse_history(TWSE_PAYLOAD, "2330")
+    incomplete = history.HistoricalPrice(
         market=incomplete.market,
         code=incomplete.code,
         date=incomplete.date,
@@ -103,12 +95,12 @@ def test_history_to_ohlcv_skips_incomplete_rows_by_default():
         source=incomplete.source,
     )
 
-    rows = history_to_ohlcv([complete, incomplete])
+    rows = history.history_to_ohlcv([complete, incomplete])
     assert len(rows) == 1
     assert rows[0].date == date(2026, 8, 10)
 
     with pytest.raises(ValueError, match="incomplete OHLC"):
-        history_to_ohlcv([incomplete], strict=True)
+        history.history_to_ohlcv([incomplete], strict=True)
 
 
 def test_fetch_price_history_dispatches_months_filters_and_sorts(monkeypatch):
@@ -118,7 +110,7 @@ def test_fetch_price_history_dispatches_months_filters_and_sorts(monkeypatch):
         calls.append((code, month, timeout))
         if month.month == 7:
             return [
-                HistoricalPrice(
+                history.HistoricalPrice(
                     Market.TWSE,
                     "2330",
                     date(2026, 7, 31),
@@ -134,7 +126,7 @@ def test_fetch_price_history_dispatches_months_filters_and_sorts(monkeypatch):
                 )
             ]
         return [
-            HistoricalPrice(
+            history.HistoricalPrice(
                 Market.TWSE,
                 "2330",
                 date(2026, 8, 3),
@@ -153,7 +145,7 @@ def test_fetch_price_history_dispatches_months_filters_and_sorts(monkeypatch):
     monkeypatch.setattr("taiwan_market_toolkit.history.fetch_twse_history_month", fake_fetch)
     monkeypatch.setattr("taiwan_market_toolkit.history.time.sleep", lambda _: None)
 
-    prices = fetch_price_history(
+    prices = history.fetch_price_history(
         "2330.TW",
         start=date(2026, 7, 30),
         end=date(2026, 8, 3),
@@ -167,7 +159,7 @@ def test_fetch_price_history_dispatches_months_filters_and_sorts(monkeypatch):
 
 def test_fetch_price_history_requires_market_for_bare_ticker():
     with pytest.raises(ValueError, match="market is required"):
-        fetch_price_history(
+        history.fetch_price_history(
             "2330",
             start=date(2026, 8, 1),
             end=date(2026, 8, 31),
@@ -176,7 +168,7 @@ def test_fetch_price_history_requires_market_for_bare_ticker():
 
 def test_fetch_price_history_caps_request_span():
     with pytest.raises(ValueError, match="max_months"):
-        fetch_price_history(
+        history.fetch_price_history(
             "2330.TW",
             start=date(2020, 1, 1),
             end=date(2021, 1, 1),
@@ -185,8 +177,8 @@ def test_fetch_price_history_caps_request_span():
 
 
 def test_write_history_csv_preserves_normalized_values(tmp_path):
-    prices = parse_twse_history(TWSE_PAYLOAD, "2330")
-    destination = write_history_csv(prices, tmp_path / "nested" / "history.csv")
+    prices = history.parse_twse_history(TWSE_PAYLOAD, "2330")
+    destination = history.write_history_csv(prices, tmp_path / "nested" / "history.csv")
 
     text = destination.read_text(encoding="utf-8-sig")
     assert "date,market,code,open,high,low,close,volume" in text
