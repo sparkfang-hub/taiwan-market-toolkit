@@ -4,15 +4,25 @@ This script is intended for scheduled/manual GitHub Actions runs. Unit tests rem
 fixture-based and do not depend on live network availability.
 """
 
+from datetime import date
+
 from taiwan_market_toolkit import (
     fetch_tpex_closing_quotes,
     fetch_tpex_company_directory,
+    fetch_tpex_history_month,
     fetch_tpex_valuation,
     fetch_twse_closing_quotes,
     fetch_twse_company_directory,
+    fetch_twse_history_month,
     fetch_twse_holiday_schedule,
     fetch_twse_valuation,
 )
+
+
+def _previous_month(today: date) -> date:
+    if today.month == 1:
+        return date(today.year - 1, 12, 1)
+    return date(today.year, today.month - 1, 1)
 
 
 def main() -> None:
@@ -23,6 +33,10 @@ def main() -> None:
     twse_valuation = fetch_twse_valuation(timeout=20.0)
     tpex_valuation = fetch_tpex_valuation(timeout=20.0)
     twse_holidays = fetch_twse_holiday_schedule(timeout=20.0)
+
+    history_month = _previous_month(date.today())
+    twse_history = fetch_twse_history_month("2330", history_month, timeout=20.0)
+    tpex_history = fetch_tpex_history_month("6488", history_month, timeout=20.0)
 
     if not twse_quotes:
         raise RuntimeError("TWSE closing quote source returned no rows")
@@ -38,6 +52,10 @@ def main() -> None:
         raise RuntimeError("TPEx valuation source returned no rows")
     if not twse_holidays:
         raise RuntimeError("TWSE holiday source returned no rows")
+    if not twse_history:
+        raise RuntimeError(f"TWSE historical source returned no rows for {history_month:%Y-%m}")
+    if not tpex_history:
+        raise RuntimeError(f"TPEx historical source returned no rows for {history_month:%Y-%m}")
 
     print(
         "TWSE quotes:",
@@ -56,6 +74,8 @@ def main() -> None:
     print("TWSE valuation:", len(twse_valuation), "rows")
     print("TPEx valuation:", len(tpex_valuation), "rows")
     print("TWSE holiday schedule:", len(twse_holidays), "rows")
+    print("TWSE history:", len(twse_history), "rows for", history_month.strftime("%Y-%m"))
+    print("TPEx history:", len(tpex_history), "rows for", history_month.strftime("%Y-%m"))
 
 
 if __name__ == "__main__":

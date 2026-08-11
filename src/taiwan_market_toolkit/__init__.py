@@ -20,6 +20,17 @@ from .directory import (
     parse_twse_company_directory,
     search_company_directory,
 )
+from .history import (
+    HistoricalPrice,
+    HistoricalPriceError,
+    fetch_price_history,
+    fetch_tpex_history_month,
+    fetch_twse_history_month,
+    history_to_ohlcv,
+    parse_tpex_history,
+    parse_twse_history,
+    write_history_csv,
+)
 from .normalize import (
     NormalizationResult,
     dataframe_to_ohlcv,
@@ -63,6 +74,8 @@ from .valuation import (
 
 __all__ = [
     "ClosingQuote",
+    "HistoricalPrice",
+    "HistoricalPriceError",
     "Market",
     "NormalizedSymbol",
     "NormalizationResult",
@@ -84,21 +97,25 @@ __all__ = [
     "exponential_moving_average",
     "fetch_closing_quote",
     "fetch_company_directory",
+    "fetch_price_history",
     "fetch_security_overview",
     "fetch_tpex_closing_payload",
     "fetch_tpex_closing_quotes",
     "fetch_tpex_company_directory",
+    "fetch_tpex_history_month",
     "fetch_tpex_valuation",
     "fetch_twse_calendar",
     "fetch_twse_closing_payload",
     "fetch_twse_closing_quotes",
     "fetch_twse_company_directory",
+    "fetch_twse_history_month",
     "fetch_twse_holiday_schedule",
     "fetch_twse_valuation",
     "fetch_valuation_metrics",
     "find_company",
     "find_missing_trading_days",
     "find_valuation",
+    "history_to_ohlcv",
     "infer_column_map",
     "normalize_and_validate_ohlcv_records",
     "normalize_market",
@@ -108,9 +125,11 @@ __all__ = [
     "parse_roc_date",
     "parse_tpex_closing_quotes",
     "parse_tpex_company_directory",
+    "parse_tpex_history",
     "parse_tpex_valuation",
     "parse_twse_closing_quotes",
     "parse_twse_company_directory",
+    "parse_twse_history",
     "parse_twse_holiday_payload",
     "parse_twse_valuation",
     "read_ohlcv_csv",
@@ -118,6 +137,7 @@ __all__ = [
     "simple_moving_average",
     "summarize_ohlcv",
     "validate_ohlcv",
+    "write_history_csv",
 ]
 
 __version__ = "0.1.0"

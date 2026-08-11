@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from taiwan_market_toolkit.cli import main
 from taiwan_market_toolkit.directory import SecurityProfile
+from taiwan_market_toolkit.history import HistoricalPrice
 from taiwan_market_toolkit.quotes import ClosingQuote
 from taiwan_market_toolkit.snapshots import SnapshotWriteResult
 from taiwan_market_toolkit.symbols import Market
@@ -147,6 +148,104 @@ def test_valuation_cli_serializes_official_metrics(monkeypatch, capsys):
         "price_to_book": "6.80",
         "dividend_per_share": None,
     }
+
+
+def test_history_cli_serializes_official_rows(monkeypatch, capsys):
+    prices = [
+        HistoricalPrice(
+            market=Market.TWSE,
+            code="2330",
+            date=date(2026, 8, 11),
+            open=Decimal("1000"),
+            high=Decimal("1020"),
+            low=Decimal("995"),
+            close=Decimal("1010"),
+            volume=1_234_000,
+            trade_value=1_245_000_000,
+            change=Decimal("10"),
+            transactions=8_765,
+            source="fixture",
+        )
+    ]
+
+    def fake_fetch(value, market, *, start, end, timeout):
+        assert value == "2330.TW"
+        assert market is None
+        assert start == date(2026, 8, 1)
+        assert end == date(2026, 8, 11)
+        assert timeout == 2.0
+        return prices
+
+    monkeypatch.setattr("taiwan_market_toolkit.cli.fetch_price_history", fake_fetch)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "tw-market",
+            "history",
+            "2330.TW",
+            "--start",
+            "2026-08-01",
+            "--end",
+            "2026-08-11",
+            "--timeout",
+            "2",
+        ],
+    )
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["rows"] == 1
+    assert payload["start"] == "2026-08-11"
+    assert payload["data"][0]["close"] == "1010"
+    assert payload["data"][0]["volume"] == 1_234_000
+
+
+def test_history_cli_can_write_csv(tmp_path, monkeypatch, capsys):
+    prices = [
+        HistoricalPrice(
+            Market.TWSE,
+            "2330",
+            date(2026, 8, 11),
+            Decimal("1000"),
+            Decimal("1020"),
+            Decimal("995"),
+            Decimal("1010"),
+            1_234_000,
+            1_245_000_000,
+            Decimal("10"),
+            8_765,
+            "fixture",
+        )
+    ]
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.cli.fetch_price_history",
+        lambda value, market, *, start, end, timeout: prices,
+    )
+    output = tmp_path / "history.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "tw-market",
+            "history",
+            "2330.TW",
+            "--start",
+            "2026-08-01",
+            "--end",
+            "2026-08-11",
+            "--output",
+            str(output),
+        ],
+    )
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["rows"] == 1
+    assert payload["path"] == str(output)
+    assert output.exists()
 
 
 def test_archive_quotes_cli_serializes_write_result(tmp_path, monkeypatch, capsys):

@@ -5,6 +5,7 @@ import pytest
 from mcp import Client
 
 from taiwan_market_toolkit.directory import SecurityProfile
+from taiwan_market_toolkit.history import HistoricalPrice
 from taiwan_market_toolkit.mcp_server import create_mcp_server
 from taiwan_market_toolkit.quotes import ClosingQuote
 from taiwan_market_toolkit.symbols import Market
@@ -110,6 +111,52 @@ async def test_mcp_official_closing_quote(mcp_client, monkeypatch):
         "market": "TWSE",
         "close": "1005",
     }
+
+
+@pytest.mark.anyio
+async def test_mcp_official_price_history(mcp_client, monkeypatch):
+    prices = [
+        HistoricalPrice(
+            Market.TWSE,
+            "2330",
+            date(2026, 8, 11),
+            Decimal("1000"),
+            Decimal("1020"),
+            Decimal("995"),
+            Decimal("1010"),
+            1_234_000,
+            1_245_000_000,
+            Decimal("10"),
+            8_765,
+            "fixture",
+        )
+    ]
+
+    def fake_history(value, market, *, start, end, timeout, max_months):
+        assert value == "2330.TW"
+        assert market is None
+        assert start == date(2026, 8, 1)
+        assert end == date(2026, 8, 11)
+        assert timeout == 2.0
+        assert max_months == 24
+        return prices
+
+    monkeypatch.setattr("taiwan_market_toolkit.mcp_server.fetch_price_history", fake_history)
+
+    result = await mcp_client.call_tool(
+        "get_official_price_history",
+        {
+            "value": "2330.TW",
+            "start": "2026-08-01",
+            "end": "2026-08-11",
+            "timeout": 2.0,
+        },
+    )
+
+    assert not result.is_error
+    assert result.structured_content["rows"] == 1
+    assert result.structured_content["data"][0]["close"] == "1010"
+    assert result.structured_content["data"][0]["volume"] == 1_234_000
 
 
 @pytest.mark.anyio

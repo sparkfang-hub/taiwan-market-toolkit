@@ -28,6 +28,23 @@ python examples/check_twse_calendar.py
 
 For reproducible research, applications should cache the exact official payload used for a run rather than assuming a future response will remain unchanged.
 
+## Official historical prices
+
+This example fetches one month of official TWSE common-equity history, converts it to the canonical OHLCV model, and calculates SMA5:
+
+```bash
+python examples/fetch_history.py
+```
+
+The equivalent CLI workflow can print JSON or write normalized CSV:
+
+```bash
+tw-market history 2330.TW --start 2026-07-01 --end 2026-07-31
+tw-market history 2330.TW --start 2026-07-01 --end 2026-07-31 --output data/2330.csv
+```
+
+Historical fetching is monthly, paced, and bounded. The v0.1 adapter intentionally supports ordinary four-digit common equities only so TPEx trading-lot units are not incorrectly applied to ETFs or other products.
+
 ## Archive official closing snapshots
 
 This example fetches the current official TWSE and TPEx closing snapshots and stores their exact JSON response bytes under a local `market-data/` directory:
@@ -54,4 +71,4 @@ python -m pip install -e '.[mcp]'
 python examples/mcp_client.py
 ```
 
-The public MCP surface exposes read-only market utilities, data normalization, and descriptive analytics. It does not expose brokerage credentials, private strategies, trading signals, or order execution.
+The public MCP surface exposes read-only market utilities, bounded common-equity history, data normalization, and descriptive analytics. It does not expose brokerage credentials, private strategies, trading signals, or order execution.

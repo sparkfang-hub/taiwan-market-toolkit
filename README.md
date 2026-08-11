@@ -2,7 +2,7 @@
 
 Open-source Python utilities for working with Taiwan stock-market data from TWSE and TPEx.
 
-Taiwan-market datasets have details that generic market libraries often leave to each application: `.TW`/`.TWO` symbols, ROC-calendar dates, Traditional Chinese CSV headers, exchange-specific company schemas, official closing snapshots, valuation fields, and holiday schedules. Taiwan Market Toolkit puts those edges behind small, testable APIs that can be reused by research pipelines, data-quality jobs, command-line tools, and AI agents.
+Taiwan-market datasets have details that generic market libraries often leave to each application: `.TW`/`.TWO` symbols, ROC-calendar dates, Traditional Chinese CSV headers, exchange-specific company schemas, official closing snapshots, historical monthly price pages, valuation fields, and holiday schedules. Taiwan Market Toolkit puts those edges behind small, testable APIs that can be reused by research pipelines, data-quality jobs, command-line tools, and AI agents.
 
 This project is infrastructure, not a trading strategy. It deliberately excludes private signals, brokerage credentials, portfolio recommendations, and order execution.
 
@@ -11,6 +11,7 @@ This project is infrastructure, not a trading strategy. It deliberately excludes
 - Normalize TWSE/TPEx tickers and market aliases.
 - Fetch and search a unified company directory from official TWSE and TPEx basic-data sources.
 - Fetch official closing snapshots for listed and TPEx main-board securities.
+- Fetch official monthly daily-price history for ordinary four-digit TWSE/TPEx common equities.
 - Fetch common official valuation metrics: P/E ratio, dividend yield, and price-to-book ratio.
 - Query a Taiwan trading calendar with explicit closure/opening overrides and the official TWSE holiday schedule.
 - Normalize OHLCV records, CSV files, and pandas-like DataFrames.
@@ -19,7 +20,7 @@ This project is infrastructure, not a trading strategy. It deliberately excludes
 - Validate OHLCV price invariants, volume, duplicates, and ordering.
 - Calculate strategy-neutral SMA, EMA, one-period returns, summaries, and missing trading dates.
 - Preserve exact official closing-snapshot JSON locally with SHA-256 integrity metadata.
-- Expose read-only market utilities through an optional MCP server.
+- Expose read-only market utilities and bounded historical queries through an optional MCP server.
 - Test on Python 3.10, 3.11, and 3.12 and validate wheel/source distributions in CI.
 - Run a separate scheduled smoke check against official exchange sources while keeping unit tests deterministic.
 
@@ -93,6 +94,27 @@ tpex = fetch_tpex_closing_quotes()
 ```
 
 The common `ClosingQuote` model contains market, trading date, code, name, and closing price. Exchange-specific fields remain in the original official payload instead of being guessed into a shared schema.
+
+## Official historical prices
+
+The exchange historical pages expose individual-security daily history one month at a time. The toolkit hides the month-by-month request loop, normalizes ROC dates and source fields, applies conservative pacing/retry behavior, and returns one common `HistoricalPrice` representation.
+
+```python
+from datetime import date
+from taiwan_market_toolkit import fetch_price_history, history_to_ohlcv
+
+prices = fetch_price_history(
+    "2330.TW",
+    start=date(2026, 1, 1),
+    end=date(2026, 8, 11),
+)
+
+rows = history_to_ohlcv(prices)
+```
+
+TPEx common-stock history labels volume in trading lots and trade value in thousands. For ordinary four-digit common equities, those quantities are normalized to shares and TWD. Non-four-digit products are rejected in v0.1 rather than silently applying the wrong trading-unit convention.
+
+The historical adapter is intentionally unadjusted. It does not infer dividend, split, capital-reduction, or other corporate-action adjustments from price jumps. See `docs/historical-prices.md` for the full scope and reliability model.
 
 ## Official valuation metrics
 
@@ -192,6 +214,9 @@ tw-market company 2330.TW
 tw-market search-company 台積
 tw-market quote 2330.TW
 tw-market valuation 2330.TW
+tw-market overview 2330.TW
+tw-market history 2330.TW --start 2026-01-01 --end 2026-08-11
+tw-market history 6488.TWO --start 2026-01-01 --end 2026-08-11 --output data/6488.csv
 tw-market calendar 2026-08-07 --next
 tw-market validate examples/sample_ohlcv_zh.csv
 tw-market analyze prices.csv --sma 5 --sma 20 --ema 20
@@ -214,13 +239,15 @@ Current MCP tools include:
 - `get_official_company_profile`
 - `search_official_company_directory`
 - `get_official_closing_quote`
+- `get_official_price_history`
 - `get_official_valuation_metrics`
+- `get_official_security_overview`
 - `check_trading_day`
 - `check_twse_trading_day`
 - `validate_ohlcv_csv_text`
 - `analyze_ohlcv_csv_text`
 
-The MCP surface is intentionally read-only with respect to markets and excludes brokerage execution and private trading strategies.
+The history MCP tool is limited to 24 calendar months and at most 1,000 returned rows per call. The MCP surface is intentionally read-only with respect to markets and excludes brokerage execution and private trading strategies.
 
 ## Official-source reliability
 
@@ -232,6 +259,8 @@ Current official integrations include:
 - TPEx main-board company basic data: `mopsfin_t187ap03_O`
 - TWSE closing snapshot: `exchangeReport/STOCK_DAY_ALL`
 - TPEx closing snapshot: `tpex_mainboard_daily_close_quotes`
+- TWSE individual historical prices: `exchangeReport/STOCK_DAY`
+- TPEx individual main-board historical prices: `www/zh-tw/afterTrading/tradingStock`
 - TWSE valuation snapshot: `exchangeReport/BWIBBU_ALL`
 - TPEx valuation snapshot: `tpex_mainboard_peratio_analysis`
 - TWSE holiday schedule: `holidaySchedule/holidaySchedule`
