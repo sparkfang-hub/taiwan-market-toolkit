@@ -7,9 +7,9 @@ or future data providers.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-from collections.abc import Iterable
 
 
 @dataclass(slots=True)
@@ -19,7 +19,7 @@ class TaiwanTradingCalendar:
     closures: set[date] = field(default_factory=set)
 
     @classmethod
-    def from_closures(cls, closures: Iterable[date]) -> "TaiwanTradingCalendar":
+    def from_closures(cls, closures: Iterable[date]) -> TaiwanTradingCalendar:
         return cls(set(closures))
 
     def is_trading_day(self, day: date) -> bool:
