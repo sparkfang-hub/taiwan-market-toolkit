@@ -14,10 +14,16 @@ from .analytics import (
     summarize_ohlcv,
 )
 from .calendar import TaiwanTradingCalendar
+from .directory import (
+    SecurityProfile,
+    fetch_company_directory,
+    find_company,
+    search_company_directory,
+)
 from .normalize import read_ohlcv_csv
 from .quotes import fetch_closing_quote
 from .snapshots import archive_official_closing_snapshot
-from .symbols import normalize_symbol
+from .symbols import normalize_market, normalize_symbol
 from .validation import validate_ohlcv
 
 _MARKET_CHOICES = ["TWSE", "TPEX", "TW", "TWO", "OTC"]
@@ -30,12 +36,26 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    symbol = subparsers.add_parser(
-        "symbol",
-        help="Normalize a Taiwan stock ticker",
-    )
+    symbol = subparsers.add_parser("symbol", help="Normalize a Taiwan stock ticker")
     symbol.add_argument("value")
     symbol.add_argument("--market", choices=_MARKET_CHOICES)
+
+    company = subparsers.add_parser(
+        "company",
+        help="Fetch one official TWSE/TPEx company profile",
+    )
+    company.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
+    company.add_argument("--market", choices=_MARKET_CHOICES)
+    company.add_argument("--timeout", type=float, default=10.0)
+
+    company_search = subparsers.add_parser(
+        "search-company",
+        help="Search the official TWSE/TPEx company directory",
+    )
+    company_search.add_argument("query")
+    company_search.add_argument("--market", choices=["TWSE", "TPEX"])
+    company_search.add_argument("--limit", type=int, default=20)
+    company_search.add_argument("--timeout", type=float, default=10.0)
 
     quote = subparsers.add_parser(
         "quote",
@@ -58,17 +78,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Explicitly replace different bytes already stored for the same market/date",
     )
 
-    calendar = subparsers.add_parser(
-        "calendar",
-        help="Query the lightweight trading calendar",
-    )
+    calendar = subparsers.add_parser("calendar", help="Query the lightweight trading calendar")
     calendar.add_argument("day", help="ISO date, e.g. 2026-08-11")
     calendar.add_argument("--next", action="store_true", dest="next_day")
-    calendar.add_argument(
-        "--previous",
-        action="store_true",
-        dest="previous_day",
-    )
+    calendar.add_argument("--previous", action="store_true", dest="previous_day")
 
     validate = subparsers.add_parser(
         "validate",
@@ -114,6 +127,19 @@ def _json_value(value: Decimal | date | None) -> str | None:
     return str(value)
 
 
+def _profile_payload(profile: SecurityProfile) -> dict[str, str | None]:
+    return {
+        "code": profile.code,
+        "market": profile.market.value,
+        "yahoo": profile.yahoo,
+        "name": profile.name,
+        "short_name": profile.short_name,
+        "english_name": profile.english_name,
+        "industry": profile.industry,
+        "listing_date": profile.listing_date.isoformat() if profile.listing_date else None,
+    }
+
+
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
@@ -126,6 +152,23 @@ def main() -> None:
             "yahoo": result.yahoo,
         }
         print(json.dumps(payload))
+        return
+
+    if args.command == "company":
+        result = find_company(args.value, args.market, timeout=args.timeout)
+        print(json.dumps(_profile_payload(result), ensure_ascii=False))
+        return
+
+    if args.command == "search-company":
+        profiles = fetch_company_directory(timeout=args.timeout)
+        market = normalize_market(args.market) if args.market else None
+        matches = search_company_directory(
+            profiles,
+            args.query,
+            market=market,
+            limit=args.limit,
+        )
+        print(json.dumps([_profile_payload(item) for item in matches], ensure_ascii=False))
         return
 
     if args.command == "quote":
@@ -188,7 +231,6 @@ def main() -> None:
         rows = read_ohlcv_csv(args.path)
         summary = summarize_ohlcv(rows)
         returns = daily_returns(rows)
-
         payload = {
             "rows": summary.rows,
             "start": _json_value(summary.start),
@@ -200,15 +242,12 @@ def main() -> None:
             "sma": {},
             "ema": {},
         }
-
         for window in args.sma:
             points = simple_moving_average(rows, window)
             payload["sma"][str(window)] = _json_value(points[-1].value) if points else None
-
         for window in args.ema:
             points = exponential_moving_average(rows, window)
             payload["ema"][str(window)] = _json_value(points[-1].value) if points else None
-
         print(json.dumps(payload, ensure_ascii=False))
         return
 

@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from taiwan_market_toolkit.cli import main
+from taiwan_market_toolkit.directory import SecurityProfile
 from taiwan_market_toolkit.quotes import ClosingQuote
 from taiwan_market_toolkit.snapshots import SnapshotWriteResult
 from taiwan_market_toolkit.symbols import Market
@@ -37,6 +38,55 @@ def test_analyze_cli_reports_summary_and_moving_averages(tmp_path, monkeypatch, 
     assert payload["latest_return"] == "0.1"
     assert payload["sma"]["2"] == "115.5"
     assert payload["ema"]["2"] == "115.6666666666666666666666667"
+
+
+def test_company_cli_serializes_official_profile(monkeypatch, capsys):
+    profile = SecurityProfile(
+        market=Market.TWSE,
+        code="2330",
+        name="台灣積體電路製造股份有限公司",
+        short_name="台積電",
+        english_name="TSMC",
+        industry="24",
+        listing_date=date(1994, 9, 5),
+    )
+
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.cli.find_company",
+        lambda value, market, *, timeout: profile,
+    )
+    monkeypatch.setattr(sys, "argv", ["tw-market", "company", "2330.TW"])
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["code"] == "2330"
+    assert payload["market"] == "TWSE"
+    assert payload["yahoo"] == "2330.TW"
+    assert payload["short_name"] == "台積電"
+    assert payload["listing_date"] == "1994-09-05"
+
+
+def test_search_company_cli_filters_market(monkeypatch, capsys):
+    profiles = [
+        SecurityProfile(Market.TWSE, "2330", "台積電", "台積電", "TSMC", "24", None),
+        SecurityProfile(Market.TPEx, "6488", "環球晶", "環球晶", "GlobalWafers", "24", None),
+    ]
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.cli.fetch_company_directory",
+        lambda *, timeout: profiles,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["tw-market", "search-company", "台積", "--market", "TWSE"],
+    )
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert len(payload) == 1
+    assert payload[0]["code"] == "2330"
 
 
 def test_quote_cli_serializes_official_quote(monkeypatch, capsys):

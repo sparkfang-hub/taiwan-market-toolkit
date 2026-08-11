@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytest
 from mcp import Client
 
+from taiwan_market_toolkit.directory import SecurityProfile
 from taiwan_market_toolkit.mcp_server import create_mcp_server
 from taiwan_market_toolkit.quotes import ClosingQuote
 from taiwan_market_toolkit.symbols import Market
@@ -29,6 +30,54 @@ async def test_mcp_normalize_symbol(mcp_client):
     assert not result.is_error
     assert result.structured_content["code"] == "2330"
     assert result.structured_content["market"] == "TWSE"
+
+
+@pytest.mark.anyio
+async def test_mcp_official_company_profile(mcp_client, monkeypatch):
+    profile = SecurityProfile(
+        market=Market.TWSE,
+        code="2330",
+        name="台灣積體電路製造股份有限公司",
+        short_name="台積電",
+        english_name="TSMC",
+        industry="24",
+        listing_date=date(1994, 9, 5),
+    )
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.mcp_server.find_company",
+        lambda value, market, *, timeout: profile,
+    )
+
+    result = await mcp_client.call_tool(
+        "get_official_company_profile",
+        {"value": "2330.TW"},
+    )
+
+    assert not result.is_error
+    assert result.structured_content["code"] == "2330"
+    assert result.structured_content["short_name"] == "台積電"
+    assert result.structured_content["listing_date"] == "1994-09-05"
+
+
+@pytest.mark.anyio
+async def test_mcp_search_company_directory(mcp_client, monkeypatch):
+    profiles = [
+        SecurityProfile(Market.TWSE, "2330", "台積電", "台積電", "TSMC", "24", None),
+        SecurityProfile(Market.TPEx, "6488", "環球晶", "環球晶", "GlobalWafers", "24", None),
+    ]
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.mcp_server.fetch_company_directory",
+        lambda *, timeout: profiles,
+    )
+
+    result = await mcp_client.call_tool(
+        "search_official_company_directory",
+        {"query": "global", "market": "TPEx"},
+    )
+
+    assert not result.is_error
+    assert len(result.structured_content["result"]) == 1
+    assert result.structured_content["result"][0]["code"] == "6488"
 
 
 @pytest.mark.anyio

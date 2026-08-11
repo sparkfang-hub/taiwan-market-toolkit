@@ -14,6 +14,25 @@ class Market(str, Enum):
     TPEx = "TPEx"
 
 
+_MARKET_ALIASES = {
+    "TWSE": Market.TWSE,
+    "TW": Market.TWSE,
+    "TPEX": Market.TPEx,
+    "TWO": Market.TPEx,
+    "OTC": Market.TPEx,
+}
+
+
+def normalize_market(value: Market | str) -> Market:
+    """Normalize common TWSE/TPEx market aliases into the ``Market`` enum."""
+    if isinstance(value, Market):
+        return value
+    try:
+        return _MARKET_ALIASES[value.strip().upper()]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported market: {value!r}") from exc
+
+
 @dataclass(frozen=True, slots=True)
 class NormalizedSymbol:
     """Normalized representation of a Taiwan-listed security symbol."""
@@ -39,7 +58,8 @@ def normalize_symbol(value: str, market: Market | str | None = None) -> Normaliz
     value:
         Raw ticker string.
     market:
-        Optional market hint. Accepted values are ``TWSE`` and ``TPEx``.
+        Optional market hint. Accepted aliases include ``TWSE``/``TW`` and
+        ``TPEx``/``TPEX``/``TWO``/``OTC``.
     """
     raw = value.strip().upper()
     match = re.fullmatch(r"([0-9A-Z]{4,6})(?:\.(TW|TWO))?", raw)
@@ -54,23 +74,7 @@ def normalize_symbol(value: str, market: Market | str | None = None) -> Normaliz
     elif suffix == "TWO":
         inferred = Market.TPEx
 
-    hinted: Market | None = None
-    if market is not None:
-        if isinstance(market, Market):
-            hinted = market
-        else:
-            normalized_market = market.strip().upper()
-            aliases = {
-                "TWSE": Market.TWSE,
-                "TW": Market.TWSE,
-                "TPEX": Market.TPEx,
-                "TWO": Market.TPEx,
-                "OTC": Market.TPEx,
-            }
-            try:
-                hinted = aliases[normalized_market]
-            except KeyError as exc:
-                raise ValueError(f"Unsupported market: {market!r}") from exc
+    hinted = normalize_market(market) if market is not None else None
 
     if inferred and hinted and inferred is not hinted:
         raise ValueError(
