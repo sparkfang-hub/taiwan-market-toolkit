@@ -95,6 +95,15 @@ def _build_parser() -> argparse.ArgumentParser:
     history.add_argument("--end", required=True, help="ISO end date, e.g. 2026-08-11")
     history.add_argument("--timeout", type=float, default=10.0)
     history.add_argument(
+        "--cache-dir",
+        help="Optional directory for exact monthly exchange-response caching.",
+    )
+    history.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Bypass completed-month cache entries and refresh them from the exchange.",
+    )
+    history.add_argument(
         "--output",
         help="Optional CSV path. Without this option, normalized rows are printed as JSON.",
     )
@@ -274,12 +283,18 @@ def main() -> None:
     if args.command == "history":
         start = date.fromisoformat(args.start)
         end = date.fromisoformat(args.end)
+        cache_options: dict[str, Any] = {}
+        if args.cache_dir:
+            cache_options["cache_dir"] = args.cache_dir
+        if args.refresh:
+            cache_options["refresh"] = True
         result = fetch_price_history(
             args.value,
             args.market,
             start=start,
             end=end,
             timeout=args.timeout,
+            **cache_options,
         )
         if args.output:
             destination = write_history_csv(result, args.output)
