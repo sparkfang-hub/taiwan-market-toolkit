@@ -1,13 +1,11 @@
 from datetime import date
 
 import pytest
-
 from taiwan_market_toolkit import (
     calendar_from_twse_records,
     parse_roc_date,
     parse_twse_holiday_payload,
 )
-
 
 FIXTURE = """[
   {"Name":"中華民國開國紀念日","Date":"1150101","Weekday":"四","Description":"依規定放假1日。"},
