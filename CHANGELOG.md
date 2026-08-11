@@ -16,7 +16,9 @@ All notable changes to this project will be documented here.
 - `tw-market overview` command and `get_official_security_overview` MCP tool.
 - Unified `MarketSnapshotRow` batch view that left-joins the official company universe with closing quotes and valuation metrics while preserving independent source dates.
 - Market-snapshot coverage summaries that make missing quote or valuation rows explicit instead of dropping listed companies.
+- `filter_market_snapshot` for deterministic code/name, market, industry, and source-coverage filtering without investment ranking logic.
 - `tw-market market-snapshot` command with both-market or single-market selection, JSON summaries, and UTF-8 CSV export.
+- Bounded `query_official_market_snapshot` MCP tool with identity/source filtering and a 100-row response cap.
 - Official monthly TWSE/TPEx historical daily-price adapters for ordinary four-digit common equities.
 - Common `HistoricalPrice` model with source, OHLC, normalized share volume, trade value, change, and transaction count.
 - Conservative monthly historical fetching with pacing, retry/backoff, request-span guards, and date-range filtering.
@@ -44,7 +46,7 @@ All notable changes to this project will be documented here.
 - Strategy-neutral OHLCV analytics: SMA, EMA, one-period returns, summaries, and trading-day gap detection.
 - Command-line interface for company lookup/search, symbol, quote, valuation, overview, market snapshots, historical prices, local archiving, calendar, CSV validation, and descriptive analysis utilities.
 - Optional MCP server using the official MCP Python SDK v2.
-- MCP tools for official security overview, company profiles/search, closing quotes, bounded historical prices, valuation metrics, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
+- MCP tools for official security overview, company profiles/search, closing quotes, bounded market-snapshot queries, bounded historical prices, valuation metrics, symbol normalization, trading-day checks, OHLCV CSV validation, and descriptive analytics.
 - Runnable examples for Chinese CSV input, TWSE calendar queries, official history, local snapshot archiving, and MCP clients.
 - PyPI Trusted Publishing workflow and a documented release checklist.
 - Distribution build and metadata validation in CI.
