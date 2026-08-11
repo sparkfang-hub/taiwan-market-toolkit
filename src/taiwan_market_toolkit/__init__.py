@@ -25,12 +25,15 @@ from .history import (
     HistoricalPriceError,
     fetch_price_history,
     fetch_tpex_history_month,
+    fetch_tpex_history_payload,
     fetch_twse_history_month,
+    fetch_twse_history_payload,
     history_to_ohlcv,
     parse_tpex_history,
     parse_twse_history,
     write_history_csv,
 )
+from .history_cache import HistoricalPayloadCache, HistoryCacheWriteResult
 from .normalize import (
     NormalizationResult,
     dataframe_to_ohlcv,
@@ -74,8 +77,10 @@ from .valuation import (
 
 __all__ = [
     "ClosingQuote",
+    "HistoricalPayloadCache",
     "HistoricalPrice",
     "HistoricalPriceError",
+    "HistoryCacheWriteResult",
     "Market",
     "NormalizedSymbol",
     "NormalizationResult",
@@ -103,12 +108,14 @@ __all__ = [
     "fetch_tpex_closing_quotes",
     "fetch_tpex_company_directory",
     "fetch_tpex_history_month",
+    "fetch_tpex_history_payload",
     "fetch_tpex_valuation",
     "fetch_twse_calendar",
     "fetch_twse_closing_payload",
     "fetch_twse_closing_quotes",
     "fetch_twse_company_directory",
     "fetch_twse_history_month",
+    "fetch_twse_history_payload",
     "fetch_twse_holiday_schedule",
     "fetch_twse_valuation",
     "fetch_valuation_metrics",
