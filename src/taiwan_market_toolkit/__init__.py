@@ -22,11 +22,14 @@ from .normalize import (
 from .quotes import (
     ClosingQuote,
     fetch_closing_quote,
+    fetch_tpex_closing_payload,
     fetch_tpex_closing_quotes,
+    fetch_twse_closing_payload,
     fetch_twse_closing_quotes,
     parse_tpex_closing_quotes,
     parse_twse_closing_quotes,
 )
+from .snapshots import SnapshotStore, SnapshotWriteResult, archive_official_closing_snapshot
 from .symbols import Market, NormalizedSymbol, normalize_symbol
 from .twse import (
     TWSEHolidayRecord,
@@ -46,16 +49,21 @@ __all__ = [
     "OHLCVRow",
     "OHLCVSummary",
     "SeriesPoint",
+    "SnapshotStore",
+    "SnapshotWriteResult",
     "TWSEHolidayRecord",
     "TaiwanTradingCalendar",
     "ValidationIssue",
+    "archive_official_closing_snapshot",
     "calendar_from_twse_records",
     "daily_returns",
     "dataframe_to_ohlcv",
     "exponential_moving_average",
     "fetch_closing_quote",
+    "fetch_tpex_closing_payload",
     "fetch_tpex_closing_quotes",
     "fetch_twse_calendar",
+    "fetch_twse_closing_payload",
     "fetch_twse_closing_quotes",
     "fetch_twse_holiday_schedule",
     "find_missing_trading_days",
