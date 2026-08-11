@@ -175,7 +175,9 @@ def parse_twse_history(payload: str | bytes, code: str) -> list[HistoricalPrice]
             invalid += 1
 
     if rows and not out and invalid:
-        raise HistoricalPriceError("All TWSE historical rows were unparsable; schema may have changed")
+        raise HistoricalPriceError(
+            "All TWSE historical rows were unparsable; schema may have changed"
+        )
     return out
 
 
@@ -241,7 +243,9 @@ def parse_tpex_history(payload: str | bytes, code: str) -> list[HistoricalPrice]
             invalid += 1
 
     if rows and not out and invalid:
-        raise HistoricalPriceError("All TPEx historical rows were unparsable; schema may have changed")
+        raise HistoricalPriceError(
+            "All TPEx historical rows were unparsable; schema may have changed"
+        )
     return out
 
 
@@ -261,14 +265,22 @@ def _fetch_text(url: str, *, timeout: float) -> str:
         url,
         headers={
             "Accept": "application/json,text/plain,*/*",
-            "User-Agent": "taiwan-market-toolkit/0.1 (+https://github.com/sparkfang-hub/taiwan-market-toolkit)",
+            "User-Agent": (
+                "taiwan-market-toolkit/0.1 "
+                "(+https://github.com/sparkfang-hub/taiwan-market-toolkit)"
+            ),
         },
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return response.read().decode("utf-8-sig")
 
 
-def fetch_twse_history_month(code: str, month: date, *, timeout: float = 10.0) -> list[HistoricalPrice]:
+def fetch_twse_history_month(
+    code: str,
+    month: date,
+    *,
+    timeout: float = 10.0,
+) -> list[HistoricalPrice]:
     """Fetch one calendar month of official TWSE daily prices."""
     _ensure_equity_code(code)
     query = urllib.parse.urlencode(
@@ -281,7 +293,12 @@ def fetch_twse_history_month(code: str, month: date, *, timeout: float = 10.0) -
     return parse_twse_history(_fetch_text(f"{TWSE_HISTORY_URL}?{query}", timeout=timeout), code)
 
 
-def fetch_tpex_history_month(code: str, month: date, *, timeout: float = 10.0) -> list[HistoricalPrice]:
+def fetch_tpex_history_month(
+    code: str,
+    month: date,
+    *,
+    timeout: float = 10.0,
+) -> list[HistoricalPrice]:
     """Fetch one calendar month of official TPEx daily prices."""
     _ensure_equity_code(code)
     query = urllib.parse.urlencode(
@@ -350,8 +367,6 @@ def fetch_price_history(
             except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_error = exc
             except HistoricalPriceError as exc:
-                # Invalid JSON can be a transient CDN response; schema errors should
-                # remain visible after the small retry budget.
                 last_error = exc
             if attempt < max_retries:
                 time.sleep(retry_backoff * (2**attempt))
