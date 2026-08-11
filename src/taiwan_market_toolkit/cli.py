@@ -22,6 +22,12 @@ from .directory import (
     search_company_directory,
 )
 from .history import HistoricalPrice, fetch_price_history, write_history_csv
+from .market_snapshot import (
+    MarketSnapshotRow,
+    fetch_market_snapshot,
+    summarize_market_snapshot,
+    write_market_snapshot_csv,
+)
 from .normalize import read_ohlcv_csv
 from .overview import SecurityOverview, fetch_security_overview
 from .quotes import ClosingQuote, fetch_closing_quote
@@ -84,6 +90,26 @@ def _build_parser() -> argparse.ArgumentParser:
     overview.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
     overview.add_argument("--market", choices=_MARKET_CHOICES)
     overview.add_argument("--timeout", type=float, default=10.0)
+
+    market_snapshot = subparsers.add_parser(
+        "market-snapshot",
+        help="Join the official listed-company, closing, and valuation snapshots",
+    )
+    market_snapshot.add_argument(
+        "--market",
+        choices=["TWSE", "TPEX"],
+        help="Optional single market. Without it, both TWSE and TPEx are fetched.",
+    )
+    market_snapshot.add_argument("--timeout", type=float, default=10.0)
+    market_snapshot.add_argument(
+        "--output",
+        help="Optional CSV path. Without it, joined rows are printed as JSON.",
+    )
+    market_snapshot.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="Print source coverage without embedding every joined row in JSON.",
+    )
 
     history = subparsers.add_parser(
         "history",
@@ -223,6 +249,39 @@ def _history_payload(item: HistoricalPrice) -> dict[str, Any]:
     }
 
 
+def _market_snapshot_payload(item: MarketSnapshotRow) -> dict[str, Any]:
+    return {
+        "market": item.market.value,
+        "code": item.code,
+        "yahoo": item.yahoo,
+        "name": item.name,
+        "short_name": item.short_name,
+        "english_name": item.english_name,
+        "industry": item.industry,
+        "listing_date": _json_value(item.listing_date),
+        "quote_date": _json_value(item.quote_date),
+        "close": _json_value(item.close),
+        "valuation_date": _json_value(item.valuation_date),
+        "pe_ratio": _json_value(item.pe_ratio),
+        "dividend_yield_pct": _json_value(item.dividend_yield_pct),
+        "price_to_book": _json_value(item.price_to_book),
+        "dividend_per_share": _json_value(item.dividend_per_share),
+    }
+
+
+def _market_snapshot_summary_payload(rows: list[MarketSnapshotRow]) -> dict[str, Any]:
+    summary = summarize_market_snapshot(rows)
+    return {
+        "rows": summary.rows,
+        "with_quote": summary.with_quote,
+        "with_valuation": summary.with_valuation,
+        "missing_quote": summary.missing_quote,
+        "missing_valuation": summary.missing_valuation,
+        "quote_dates": [value.isoformat() for value in summary.quote_dates],
+        "valuation_dates": [value.isoformat() for value in summary.valuation_dates],
+    }
+
+
 def _overview_payload(overview: SecurityOverview) -> dict[str, Any]:
     return {
         "code": overview.code,
@@ -278,6 +337,19 @@ def main() -> None:
     if args.command == "overview":
         result = fetch_security_overview(args.value, args.market, timeout=args.timeout)
         print(json.dumps(_overview_payload(result), ensure_ascii=False))
+        return
+
+    if args.command == "market-snapshot":
+        result = fetch_market_snapshot(args.market, timeout=args.timeout)
+        summary = _market_snapshot_summary_payload(result)
+        if args.output:
+            destination = write_market_snapshot_csv(result, args.output)
+            payload = {"path": str(destination), **summary}
+        elif args.summary_only:
+            payload = summary
+        else:
+            payload = {**summary, "data": [_market_snapshot_payload(item) for item in result]}
+        print(json.dumps(payload, ensure_ascii=False))
         return
 
     if args.command == "history":
