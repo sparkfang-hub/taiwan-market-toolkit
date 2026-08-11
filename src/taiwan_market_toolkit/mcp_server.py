@@ -23,6 +23,7 @@ from .directory import (
     search_company_directory,
 )
 from .history import HistoricalPrice, fetch_price_history
+from .mcp_market import register_market_snapshot_tools
 from .normalize import parse_ohlcv_csv
 from .overview import SecurityOverview, fetch_security_overview
 from .quotes import ClosingQuote, fetch_closing_quote
@@ -121,6 +122,8 @@ def create_mcp_server():
             "does not provide trading signals, recommendations, or order execution."
         ),
     )
+
+    register_market_snapshot_tools(server)
 
     @server.tool()
     def normalize_taiwan_symbol(value: str, market: str | None = None) -> dict[str, Any]:
