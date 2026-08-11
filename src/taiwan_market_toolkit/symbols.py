@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import Enum
-import re
 
 
 class Market(str, Enum):
@@ -64,7 +64,6 @@ def normalize_symbol(value: str, market: Market | str | None = None) -> Normaliz
                 "TWSE": Market.TWSE,
                 "TW": Market.TWSE,
                 "TPEX": Market.TPEx,
-                "TPEx": Market.TPEx,
                 "TWO": Market.TPEx,
                 "OTC": Market.TPEx,
             }
