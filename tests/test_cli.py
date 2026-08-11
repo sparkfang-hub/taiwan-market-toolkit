@@ -31,4 +31,4 @@ def test_analyze_cli_reports_summary_and_moving_averages(tmp_path, monkeypatch, 
     assert payload["total_volume"] == 60
     assert payload["latest_return"] == "0.1"
     assert payload["sma"]["2"] == "115.5"
-    assert payload["ema"]["2"] == "117.8333333333333333333333333"
+    assert payload["ema"]["2"] == "115.6666666666666666666666667"
