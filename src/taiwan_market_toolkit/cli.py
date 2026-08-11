@@ -7,7 +7,9 @@ import json
 from datetime import date
 
 from .calendar import TaiwanTradingCalendar
+from .normalize import read_ohlcv_csv
 from .symbols import normalize_symbol
+from .validation import validate_ohlcv
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -39,6 +41,17 @@ def _build_parser() -> argparse.ArgumentParser:
         dest="previous_day",
     )
 
+    validate = subparsers.add_parser(
+        "validate",
+        help="Normalize and validate an OHLCV CSV file",
+    )
+    validate.add_argument("path")
+    validate.add_argument(
+        "--no-sort",
+        action="store_true",
+        help="Preserve CSV row order so out-of-order rows are reported",
+    )
+
     return parser
 
 
@@ -65,6 +78,20 @@ def main() -> None:
             print(calendar.previous_trading_day(target).isoformat())
         else:
             print("open" if calendar.is_trading_day(target) else "closed")
+        return
+
+    if args.command == "validate":
+        rows = read_ohlcv_csv(args.path, sort=not args.no_sort)
+        issues = validate_ohlcv(rows)
+        payload = {
+            "rows": len(rows),
+            "valid": not issues,
+            "issues": [
+                {"row": issue.row, "code": issue.code, "message": issue.message}
+                for issue in issues
+            ],
+        }
+        print(json.dumps(payload, ensure_ascii=False))
         return
 
     parser.error("unknown command")
