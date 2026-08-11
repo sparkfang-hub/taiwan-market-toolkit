@@ -21,6 +21,7 @@ from .directory import (
     find_company,
     search_company_directory,
 )
+from .history import HistoricalPrice, fetch_price_history, write_history_csv
 from .normalize import read_ohlcv_csv
 from .overview import SecurityOverview, fetch_security_overview
 from .quotes import ClosingQuote, fetch_closing_quote
@@ -83,6 +84,20 @@ def _build_parser() -> argparse.ArgumentParser:
     overview.add_argument("value", help="Ticker such as 2330.TW or 6488.TWO")
     overview.add_argument("--market", choices=_MARKET_CHOICES)
     overview.add_argument("--timeout", type=float, default=10.0)
+
+    history = subparsers.add_parser(
+        "history",
+        help="Fetch official monthly historical prices for a common equity",
+    )
+    history.add_argument("value", help="Four-digit common-equity ticker such as 2330.TW")
+    history.add_argument("--market", choices=_MARKET_CHOICES)
+    history.add_argument("--start", required=True, help="ISO start date, e.g. 2026-01-01")
+    history.add_argument("--end", required=True, help="ISO end date, e.g. 2026-08-11")
+    history.add_argument("--timeout", type=float, default=10.0)
+    history.add_argument(
+        "--output",
+        help="Optional CSV path. Without this option, normalized rows are printed as JSON.",
+    )
 
     archive = subparsers.add_parser(
         "archive-quotes",
@@ -182,6 +197,23 @@ def _valuation_payload(metrics: ValuationMetrics) -> dict[str, str | None]:
     }
 
 
+def _history_payload(item: HistoricalPrice) -> dict[str, Any]:
+    return {
+        "date": item.date.isoformat(),
+        "market": item.market.value,
+        "code": item.code,
+        "open": _json_value(item.open),
+        "high": _json_value(item.high),
+        "low": _json_value(item.low),
+        "close": _json_value(item.close),
+        "volume": item.volume,
+        "trade_value": item.trade_value,
+        "change": _json_value(item.change),
+        "transactions": item.transactions,
+        "source": item.source,
+    }
+
+
 def _overview_payload(overview: SecurityOverview) -> dict[str, Any]:
     return {
         "code": overview.code,
@@ -237,6 +269,34 @@ def main() -> None:
     if args.command == "overview":
         result = fetch_security_overview(args.value, args.market, timeout=args.timeout)
         print(json.dumps(_overview_payload(result), ensure_ascii=False))
+        return
+
+    if args.command == "history":
+        start = date.fromisoformat(args.start)
+        end = date.fromisoformat(args.end)
+        result = fetch_price_history(
+            args.value,
+            args.market,
+            start=start,
+            end=end,
+            timeout=args.timeout,
+        )
+        if args.output:
+            destination = write_history_csv(result, args.output)
+            payload = {
+                "path": str(destination),
+                "rows": len(result),
+                "start": result[0].date.isoformat() if result else None,
+                "end": result[-1].date.isoformat() if result else None,
+            }
+        else:
+            payload = {
+                "rows": len(result),
+                "start": result[0].date.isoformat() if result else None,
+                "end": result[-1].date.isoformat() if result else None,
+                "data": [_history_payload(item) for item in result],
+            }
+        print(json.dumps(payload, ensure_ascii=False))
         return
 
     if args.command == "archive-quotes":
