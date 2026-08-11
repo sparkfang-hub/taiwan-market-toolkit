@@ -24,7 +24,7 @@ from .directory import (
 )
 from .normalize import parse_ohlcv_csv
 from .quotes import fetch_closing_quote
-from .symbols import Market, normalize_symbol
+from .symbols import normalize_market, normalize_symbol
 from .twse import fetch_twse_calendar
 from .validation import validate_ohlcv
 
@@ -90,7 +90,7 @@ def create_mcp_server():
     ) -> list[dict[str, Any]]:
         """Search official TWSE/TPEx company identity metadata by code or name."""
         profiles = fetch_company_directory(timeout=timeout)
-        resolved_market = Market(market) if market else None
+        resolved_market = normalize_market(market) if market else None
         return [
             _profile_payload(profile)
             for profile in search_company_directory(
