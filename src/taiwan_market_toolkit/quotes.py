@@ -143,14 +143,24 @@ def _fetch_payload(url: str, *, timeout: float) -> bytes:
         return response.read()
 
 
+def fetch_twse_closing_payload(*, timeout: float = 10.0) -> bytes:
+    """Fetch the unmodified official TWSE closing-snapshot response body."""
+    return _fetch_payload(TWSE_CURRENT_QUOTES_URL, timeout=timeout)
+
+
+def fetch_tpex_closing_payload(*, timeout: float = 10.0) -> bytes:
+    """Fetch the unmodified official TPEx closing-snapshot response body."""
+    return _fetch_payload(TPEX_CURRENT_QUOTES_URL, timeout=timeout)
+
+
 def fetch_twse_closing_quotes(*, timeout: float = 10.0) -> list[ClosingQuote]:
     """Fetch the current official TWSE all-securities closing snapshot."""
-    return parse_twse_closing_quotes(_fetch_payload(TWSE_CURRENT_QUOTES_URL, timeout=timeout))
+    return parse_twse_closing_quotes(fetch_twse_closing_payload(timeout=timeout))
 
 
 def fetch_tpex_closing_quotes(*, timeout: float = 10.0) -> list[ClosingQuote]:
     """Fetch the current official TPEx main-board closing snapshot."""
-    return parse_tpex_closing_quotes(_fetch_payload(TPEX_CURRENT_QUOTES_URL, timeout=timeout))
+    return parse_tpex_closing_quotes(fetch_tpex_closing_payload(timeout=timeout))
 
 
 def fetch_closing_quote(
