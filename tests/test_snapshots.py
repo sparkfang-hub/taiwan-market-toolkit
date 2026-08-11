@@ -2,11 +2,7 @@ from datetime import date
 
 import pytest
 
-from taiwan_market_toolkit.snapshots import (
-    SnapshotStore,
-    archive_official_closing_snapshot,
-)
-
+from taiwan_market_toolkit.snapshots import SnapshotStore, archive_official_closing_snapshot
 
 TWSE_PAYLOAD = b"""[
   {"Date":"20260811","Code":"2330","Name":"TSMC","ClosingPrice":"1005"}
