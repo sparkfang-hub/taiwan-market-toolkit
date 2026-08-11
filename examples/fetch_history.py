@@ -2,20 +2,16 @@
 
 from datetime import date
 
-from taiwan_market_toolkit import (
-    fetch_price_history,
-    history_to_ohlcv,
-    simple_moving_average,
-)
+import taiwan_market_toolkit as tmt
 
 
-prices = fetch_price_history(
+prices = tmt.fetch_price_history(
     "2330.TW",
     start=date(2026, 7, 1),
     end=date(2026, 7, 31),
 )
-rows = history_to_ohlcv(prices)
-sma5 = simple_moving_average(rows, 5)
+rows = tmt.history_to_ohlcv(prices)
+sma5 = tmt.simple_moving_average(rows, 5)
 
 print("observations:", len(prices))
 if prices:
