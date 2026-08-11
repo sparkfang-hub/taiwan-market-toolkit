@@ -22,6 +22,14 @@ The JSON response is parsed into `TWSEHolidayRecord` objects and then into expli
 
 The toolkit exposes the common fields date, code, name, market, and closing price as `ClosingQuote`.
 
+### Ex-rights/ex-dividend announcements
+
+`https://openapi.twse.com.tw/v1/exchangeReport/TWT48U_ALL`
+
+The current announcement table publishes the ex-rights/ex-dividend date, security code/name, action type, stock-dividend ratio, cash-capital-increase subscription ratio and price, cash dividend, and related subscription-share fields. The toolkit normalizes these fields into `CorporateAction` while retaining the exchange's original action label.
+
+Not-yet-announced values such as an unpublished subscription price remain `None`; a published numeric zero remains zero.
+
 ### Individual historical daily prices
 
 `https://www.twse.com.tw/exchangeReport/STOCK_DAY`
@@ -51,6 +59,14 @@ Company code, names, industry code, and listing date are mapped into the same `S
 `https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes`
 
 The common subset is date, security code, company name, market, and closing price.
+
+### Ex-rights/ex-dividend announcements
+
+`https://www.tpex.org.tw/openapi/v1/tpex_exright_prepost`
+
+The current TPEx preview table publishes the ex-rights/ex-dividend date, security code/name, action type, stock-dividend ratio, cash-capital-increase subscription ratio and price, cash dividend, and public/employee/existing-shareholder subscription fields. These fields map into the same `CorporateAction` model as TWSE announcements.
+
+The implementation was checked against the live official OpenAPI schema before the parser fixtures were written. Scheduled source probes continue to exercise the endpoint independently from deterministic unit tests.
 
 ### Individual main-board historical daily prices
 
