@@ -23,7 +23,7 @@ from .directory import (
 from .normalize import read_ohlcv_csv
 from .quotes import fetch_closing_quote
 from .snapshots import archive_official_closing_snapshot
-from .symbols import Market, normalize_symbol
+from .symbols import normalize_market, normalize_symbol
 from .validation import validate_ohlcv
 
 _MARKET_CHOICES = ["TWSE", "TPEX", "TW", "TWO", "OTC"]
@@ -161,7 +161,7 @@ def main() -> None:
 
     if args.command == "search-company":
         profiles = fetch_company_directory(timeout=args.timeout)
-        market = Market(args.market) if args.market else None
+        market = normalize_market(args.market) if args.market else None
         matches = search_company_directory(
             profiles,
             args.query,
