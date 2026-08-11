@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+
 from taiwan_market_toolkit import (
     calendar_from_twse_records,
     parse_roc_date,
