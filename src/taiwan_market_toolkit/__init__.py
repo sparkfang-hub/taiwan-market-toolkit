@@ -40,7 +40,7 @@ from .quotes import (
     parse_twse_closing_quotes,
 )
 from .snapshots import SnapshotStore, SnapshotWriteResult, archive_official_closing_snapshot
-from .symbols import Market, NormalizedSymbol, normalize_symbol
+from .symbols import Market, NormalizedSymbol, normalize_market, normalize_symbol
 from .twse import (
     TWSEHolidayRecord,
     calendar_from_twse_records,
@@ -84,6 +84,7 @@ __all__ = [
     "find_missing_trading_days",
     "infer_column_map",
     "normalize_and_validate_ohlcv_records",
+    "normalize_market",
     "normalize_ohlcv_records",
     "normalize_symbol",
     "parse_ohlcv_csv",
