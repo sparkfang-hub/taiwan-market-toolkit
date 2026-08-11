@@ -2,6 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+
 import taiwan_market_toolkit.corporate_actions as corporate_actions
 from taiwan_market_toolkit.corporate_actions import (
     CorporateAction,
@@ -12,7 +13,6 @@ from taiwan_market_toolkit.corporate_actions import (
     write_corporate_actions_csv,
 )
 from taiwan_market_toolkit.symbols import Market
-
 
 TWSE_PAYLOAD = """[
   {
