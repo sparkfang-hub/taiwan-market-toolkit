@@ -14,6 +14,7 @@ The project is infrastructure, not a trading strategy. It deliberately excludes 
 
 - Normalize Taiwan tickers such as `2330`, `2330.TW`, and `6488.TWO`.
 - Represent TWSE and TPEx market identifiers consistently.
+- Fetch a small common closing-quote snapshot from the official TWSE or TPEx OpenAPI without brokerage credentials.
 - Query a Taiwan trading calendar with explicit closure/opening overrides.
 - Fetch and parse the official TWSE market holiday schedule from TWSE OpenAPI.
 - Normalize records, CSV files, and pandas-like DataFrames into one OHLCV schema.
@@ -21,10 +22,11 @@ The project is infrastructure, not a trading strategy. It deliberately excludes 
 - Parse common ROC-calendar dates such as `115/08/11` and `1150811`.
 - Validate OHLCV rows for malformed prices, negative volume, duplicates, and ordering issues.
 - Calculate strategy-neutral SMA, EMA, daily returns, descriptive summaries, and missing trading dates.
-- Use a CLI for symbol, calendar, validation, and OHLCV analysis operations.
-- Expose non-strategy utilities and descriptive analytics to AI hosts through an optional MCP server.
+- Use a CLI for symbol, quote, calendar, validation, and OHLCV analysis operations.
+- Expose read-only market utilities and descriptive analytics to AI hosts through an optional MCP server.
 - Build and test on Python 3.10, 3.11, and 3.12 through GitHub Actions.
 - Build and validate wheel/source distributions on every pull request.
+- Run a separate scheduled smoke check against official exchange sources so normal unit tests can stay deterministic.
 
 ## Installation
 
@@ -74,6 +76,32 @@ A market hint can be supplied for a bare ticker:
 ```python
 normalize_symbol("6488", "TPEX").yahoo
 # '6488.TWO'
+```
+
+### Official closing quotes
+
+Fetch one latest official closing snapshot by using an exchange suffix or an explicit market hint:
+
+```python
+from taiwan_market_toolkit import fetch_closing_quote
+
+quote = fetch_closing_quote("2330.TW")
+print(quote.date)
+print(quote.code)
+print(quote.name)
+print(quote.market)
+print(quote.close)
+```
+
+The common `ClosingQuote` model intentionally contains only fields with clear shared meaning across the two exchanges: market, trading date, security code, name, and closing price. Exchange-specific details remain in the original official payload instead of being guessed into a common schema.
+
+For batch workflows, the raw adapters are also public:
+
+```python
+from taiwan_market_toolkit import fetch_tpex_closing_quotes, fetch_twse_closing_quotes
+
+twse_rows = fetch_twse_closing_quotes()
+tpex_rows = fetch_tpex_closing_quotes()
 ```
 
 ### Trading calendar
@@ -226,14 +254,15 @@ missing = find_missing_trading_days(rows, calendar)
 
 ```bash
 tw-market symbol 2330.TW
-tw-market symbol 6488 --market TPEX
+tw-market quote 2330.TW
+tw-market quote 6488 --market TPEX
 tw-market calendar 2026-08-07 --next
 tw-market validate examples/sample_ohlcv_zh.csv
 tw-market validate prices.csv --no-sort
 tw-market analyze prices.csv --sma 5 --sma 20 --ema 20
 ```
 
-The `validate` command reports data-quality issues. The `analyze` command reports the date range, close range, total volume, latest fractional return, and any caller-selected SMA/EMA windows as JSON.
+The `quote` command performs a read-only request to the relevant official exchange OpenAPI. The `validate` command reports data-quality issues. The `analyze` command reports the date range, close range, total volume, latest fractional return, and any caller-selected SMA/EMA windows as JSON.
 
 ## MCP server
 
@@ -249,13 +278,14 @@ tw-market-mcp
 The server currently exposes:
 
 - `normalize_taiwan_symbol` — normalize TWSE/TPEx-style tickers;
+- `get_official_closing_quote` — fetch one read-only official TWSE/TPEx closing snapshot;
 - `check_trading_day` — apply weekend rules plus caller-supplied closures/openings;
 - `check_twse_trading_day` — query the official TWSE OpenAPI schedule;
 - `validate_ohlcv_csv_text` — normalize and validate CSV-formatted OHLCV data;
 - `analyze_ohlcv_csv_text` — summarize OHLCV data and calculate caller-selected SMA/EMA windows;
 - `taiwan-market://about` — describe the project scope and safety boundary.
 
-The core MCP tools require no brokerage credentials and provide no order execution. The TWSE calendar tool performs a read-only request to the public TWSE OpenAPI endpoint.
+The MCP surface requires no brokerage credentials and provides no order execution. Exchange-backed tools perform read-only requests to public official sources.
 
 For development, the official MCP Inspector can load the server module:
 
@@ -281,9 +311,17 @@ Before the first release, the maintainer must register the GitHub workflow as a 
 
 ## Data sources and provenance
 
-Market integrations should use authoritative public sources where possible and keep fetching separate from parsing. Source adapters must document provenance, update behavior, licensing/terms considerations, and failure behavior.
+Market integrations use authoritative public sources where possible and keep fetching separate from parsing. Source adapters document provenance, update behavior, licensing/terms considerations, and failure behavior.
 
-TWSE holiday data currently comes from the official TWSE OpenAPI. TPEx market data has an official OpenAPI platform, while a verified TPEx holiday-calendar adapter remains open work until the most stable authoritative source is selected.
+Current implemented official sources include:
+
+- TWSE `STOCK_DAY_ALL` for the listed-market closing snapshot;
+- TPEx `tpex_mainboard_daily_close_quotes` for the OTC main-board closing snapshot;
+- TWSE `holidaySchedule/holidaySchedule` for the listed-market calendar.
+
+Normal CI uses fixtures rather than live network calls. A separate scheduled/manual source smoke check probes implemented official endpoints so upstream schema or availability changes are visible without making every pull request depend on exchange uptime.
+
+See `docs/data-sources.md` for the detailed provenance and reliability policy.
 
 ## Project scope and roadmap
 
