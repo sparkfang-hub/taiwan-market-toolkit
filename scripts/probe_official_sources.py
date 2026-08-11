@@ -17,6 +17,10 @@ from taiwan_market_toolkit import (
     fetch_twse_holiday_schedule,
     fetch_twse_valuation,
 )
+from taiwan_market_toolkit.corporate_actions import (
+    fetch_tpex_corporate_actions,
+    fetch_twse_corporate_actions,
+)
 
 
 def _previous_month(today: date) -> date:
@@ -33,6 +37,8 @@ def main() -> None:
     twse_valuation = fetch_twse_valuation(timeout=20.0)
     tpex_valuation = fetch_tpex_valuation(timeout=20.0)
     twse_holidays = fetch_twse_holiday_schedule(timeout=20.0)
+    twse_actions = fetch_twse_corporate_actions(timeout=20.0)
+    tpex_actions = fetch_tpex_corporate_actions(timeout=20.0)
 
     history_month = _previous_month(date.today())
     twse_history = fetch_twse_history_month("2330", history_month, timeout=20.0)
@@ -52,6 +58,10 @@ def main() -> None:
         raise RuntimeError("TPEx valuation source returned no rows")
     if not twse_holidays:
         raise RuntimeError("TWSE holiday source returned no rows")
+    if not twse_actions:
+        raise RuntimeError("TWSE corporate-action source returned no rows")
+    if not tpex_actions:
+        raise RuntimeError("TPEx corporate-action source returned no rows")
     if not twse_history:
         raise RuntimeError(f"TWSE historical source returned no rows for {history_month:%Y-%m}")
     if not tpex_history:
@@ -74,6 +84,8 @@ def main() -> None:
     print("TWSE valuation:", len(twse_valuation), "rows")
     print("TPEx valuation:", len(tpex_valuation), "rows")
     print("TWSE holiday schedule:", len(twse_holidays), "rows")
+    print("TWSE corporate actions:", len(twse_actions), "rows")
+    print("TPEx corporate actions:", len(tpex_actions), "rows")
     print("TWSE history:", len(twse_history), "rows for", history_month.strftime("%Y-%m"))
     print("TPEx history:", len(tpex_history), "rows for", history_month.strftime("%Y-%m"))
 
