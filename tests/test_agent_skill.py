@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / ".agents" / "skills" / "taiwan-market-research"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
