@@ -62,4 +62,4 @@ Use Taiwan Market Toolkit to check market-snapshot source coverage without ranki
 
 The Agent Skill is a distribution and orchestration layer, not a second market-data implementation. New exchange adapters, normalization rules, and calculations belong in tested Python modules first. The skill should remain a thin map from user intent to those public interfaces.
 
-OpenAI's current Agent Skills documentation defines `SKILL.md` as the required skill entry point and supports repository-scoped discovery under `.agents/skills`. Skills can also be installed from repositories through the skill installer. For broader distribution, OpenAI documents Plugins as the packaging layer for skills and related resources.
+OpenAI's current Agent Skills documentation defines the skill instruction file as the required entry point and supports repository-scoped discovery under `.agents/skills`. Skills can also be installed from repositories through the skill installer. For broader distribution, OpenAI documents Plugins as the packaging layer for skills and related resources.
