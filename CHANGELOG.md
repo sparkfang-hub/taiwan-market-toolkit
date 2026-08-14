@@ -7,6 +7,7 @@ All notable changes to this project will be documented here.
 ### Added
 
 - Initial Python package structure.
+- Repository-scoped `taiwan-market-research` Agent Skill that routes source-aware Taiwan market research to the toolkit's existing read-only CLI and Python APIs.
 - Taiwan stock symbol normalization for TWSE and TPEx suffix conventions.
 - Unified official TWSE/TPEx `SecurityProfile` company directory with local code/name search.
 - `tw-market company` and `tw-market search-company` commands for official company identity metadata.
