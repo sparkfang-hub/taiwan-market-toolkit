@@ -6,7 +6,7 @@ Taiwan-market datasets have details that generic market libraries often leave to
 
 This project is infrastructure, not a trading strategy. It deliberately excludes private signals, brokerage credentials, portfolio recommendations, and order execution.
 
-For a short end-to-end walkthrough, start with `docs/quickstart.md`.
+For a short end-to-end walkthrough, start with `docs/quickstart.md`. For AI-agent workflows, see `docs/agent-skill.md`; the repository includes a `taiwan-market-research` Agent Skill that routes natural-language research tasks to the same tested CLI and Python APIs.
 
 ## Current capabilities
 
@@ -27,6 +27,7 @@ For a short end-to-end walkthrough, start with `docs/quickstart.md`.
 - Calculate strategy-neutral SMA, EMA, one-period returns, summaries, and missing trading dates.
 - Preserve exact official closing-snapshot JSON locally with SHA-256 integrity metadata.
 - Expose bounded, read-only market utilities through an optional MCP server.
+- Provide a repository-scoped Agent Skill for source-aware Taiwan market research through Codex and compatible skill hosts.
 - Test on Python 3.10, 3.11, and 3.12, validate distributions, and smoke-test built wheels on Linux, macOS, and Windows.
 - Run separate scheduled smoke checks against official exchange sources while keeping ordinary unit tests deterministic.
 
@@ -55,6 +56,20 @@ pytest
 ```
 
 See `docs/quickstart.md` for a five-minute path through company data, market snapshots, historical prices, corporate actions, Taiwan-style CSV input, and MCP.
+
+## Agent Skill
+
+The repository includes `.agents/skills/taiwan-market-research/SKILL.md`. Codex can discover the skill when working in this repository, and the standalone skill can be installed from GitHub with the Codex skill installer.
+
+The skill does not implement a second market-data stack. It maps user intent to existing commands and public APIs while preserving source dates, missing values, unadjusted-history semantics, and the project's read-only boundary.
+
+Example request:
+
+```text
+Use Taiwan Market Toolkit to show the official company, closing-price, and valuation overview for 2330.TW. Keep the source dates separate.
+```
+
+See `docs/agent-skill.md` for installation details and more examples.
 
 ## Company directory
 
