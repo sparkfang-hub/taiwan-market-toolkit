@@ -19,6 +19,7 @@ Use this index to find the shortest path for a task.
 
 ## Interfaces
 
+- `agent-skill.md` — repository-scoped Agent Skill for source-aware Taiwan market research with Codex and compatible skill hosts.
 - `mcp.md` — optional read-only MCP server for AI hosts.
 - The root `README.md` lists the current CLI commands and public package capabilities.
 
