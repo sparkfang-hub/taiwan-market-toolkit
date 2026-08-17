@@ -32,6 +32,14 @@ Fetch one exchange only:
 rows = fetch_corporate_actions("TWSE")
 ```
 
+## CLI
+
+The CLI prints normalized JSON by default and writes UTF-8 CSV when --output is supplied:
+
+```bash
+tw-market corporate-actions --market TWSE --code 2330 --start 2026-01-01 --output market-data/corporate-actions.csv
+```
+
 Find current announcements for one security:
 
 ```python

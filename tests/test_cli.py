@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from taiwan_market_toolkit.cli import main
+from taiwan_market_toolkit.corporate_actions import CorporateAction, CorporateActionKind
 from taiwan_market_toolkit.directory import SecurityProfile
 from taiwan_market_toolkit.history import HistoricalPrice
 from taiwan_market_toolkit.quotes import ClosingQuote
@@ -299,3 +300,93 @@ def test_archive_quotes_cli_serializes_write_result(tmp_path, monkeypatch, capsy
         "created": True,
         "replaced": False,
     }
+
+
+def test_corporate_actions_cli_filters_and_serializes(monkeypatch, capsys):
+    rows = [
+        CorporateAction(
+            market=Market.TWSE,
+            date=date(2026, 8, 19),
+            code="2330",
+            name="台積電",
+            kind=CorporateActionKind.EX_DIVIDEND,
+            raw_action="息",
+            stock_dividend_ratio=None,
+            subscription_ratio=None,
+            subscription_price_per_share=None,
+            cash_dividend_per_share=Decimal("3.00"),
+            public_underwriting_shares=None,
+            employee_subscription_shares=None,
+            existing_shareholder_subscription_shares=None,
+            existing_shareholder_subscription_per_thousand=None,
+            source="fixture",
+        )
+    ]
+
+    def fake_fetch(market, *, timeout):
+        assert market == "TWSE"
+        assert timeout == 2.0
+        return rows
+
+    monkeypatch.setattr("taiwan_market_toolkit.cli.fetch_corporate_actions", fake_fetch)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "tw-market",
+            "corporate-actions",
+            "--market",
+            "TWSE",
+            "--code",
+            "2330",
+            "--kind",
+            "ex-dividend",
+            "--timeout",
+            "2",
+        ],
+    )
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["rows"] == 1
+    assert payload["data"][0]["yahoo"] == "2330.TW"
+    assert payload["data"][0]["cash_dividend_per_share"] == "3.00"
+
+
+def test_corporate_actions_cli_writes_csv(tmp_path, monkeypatch, capsys):
+    row = CorporateAction(
+        market=Market.TPEx,
+        date=date(2026, 8, 3),
+        code="3306",
+        name="鼎天",
+        kind=CorporateActionKind.EX_DIVIDEND,
+        raw_action="除息",
+        stock_dividend_ratio=Decimal("0"),
+        subscription_ratio=Decimal("0"),
+        subscription_price_per_share=Decimal("0"),
+        cash_dividend_per_share=Decimal("1.70"),
+        public_underwriting_shares=0,
+        employee_subscription_shares=0,
+        existing_shareholder_subscription_shares=0,
+        existing_shareholder_subscription_per_thousand=Decimal("0"),
+        source="fixture",
+    )
+    monkeypatch.setattr(
+        "taiwan_market_toolkit.cli.fetch_corporate_actions",
+        lambda market, *, timeout: [row],
+    )
+    output = tmp_path / "actions.csv"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["tw-market", "corporate-actions", "--output", str(output)],
+    )
+
+    main()
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {"path": str(output), "rows": 1}
+    csv_text = output.read_text(encoding="utf-8-sig")
+    assert "3306.TWO" in csv_text
+    assert "ex-dividend" in csv_text

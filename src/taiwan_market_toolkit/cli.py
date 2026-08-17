@@ -15,6 +15,13 @@ from .analytics import (
     summarize_ohlcv,
 )
 from .calendar import TaiwanTradingCalendar
+from .corporate_actions import (
+    CorporateAction,
+    CorporateActionKind,
+    fetch_corporate_actions,
+    filter_corporate_actions,
+    write_corporate_actions_csv,
+)
 from .directory import (
     SecurityProfile,
     fetch_company_directory,
@@ -146,6 +153,25 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Explicitly replace different bytes already stored for the same market/date",
     )
+
+    corporate_actions = subparsers.add_parser(
+        "corporate-actions",
+        help="Fetch and export official ex-rights/ex-dividend announcements",
+    )
+    corporate_actions.add_argument("--market", choices=["TWSE", "TPEX"])
+    corporate_actions.add_argument("--code", help="Optional security code filter")
+    corporate_actions.add_argument("--start", help="Inclusive ISO date filter")
+    corporate_actions.add_argument("--end", help="Inclusive ISO date filter")
+    corporate_actions.add_argument(
+        "--kind",
+        choices=[item.value for item in CorporateActionKind],
+        help="Optional normalized action kind filter",
+    )
+    corporate_actions.add_argument(
+        "--output",
+        help="Optional UTF-8 CSV path. Without it, print JSON.",
+    )
+    corporate_actions.add_argument("--timeout", type=float, default=10.0)
 
     calendar = subparsers.add_parser("calendar", help="Query the lightweight trading calendar")
     calendar.add_argument("day", help="ISO date, e.g. 2026-08-11")
@@ -293,6 +319,29 @@ def _overview_payload(overview: SecurityOverview) -> dict[str, Any]:
     }
 
 
+def _corporate_action_payload(item: CorporateAction) -> dict[str, Any]:
+    return {
+        "date": item.date.isoformat(),
+        "market": item.market.value,
+        "code": item.code,
+        "yahoo": item.yahoo,
+        "name": item.name,
+        "kind": item.kind.value,
+        "raw_action": item.raw_action,
+        "stock_dividend_ratio": _json_value(item.stock_dividend_ratio),
+        "subscription_ratio": _json_value(item.subscription_ratio),
+        "subscription_price_per_share": _json_value(item.subscription_price_per_share),
+        "cash_dividend_per_share": _json_value(item.cash_dividend_per_share),
+        "public_underwriting_shares": item.public_underwriting_shares,
+        "employee_subscription_shares": item.employee_subscription_shares,
+        "existing_shareholder_subscription_shares": item.existing_shareholder_subscription_shares,
+        "existing_shareholder_subscription_per_thousand": _json_value(
+            item.existing_shareholder_subscription_per_thousand
+        ),
+        "source": item.source,
+    }
+
+
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
@@ -402,6 +451,28 @@ def main() -> None:
             "created": result.created,
             "replaced": result.replaced,
         }
+        print(json.dumps(payload, ensure_ascii=False))
+        return
+
+    if args.command == "corporate-actions":
+        start = date.fromisoformat(args.start) if args.start else None
+        end = date.fromisoformat(args.end) if args.end else None
+        rows = fetch_corporate_actions(args.market, timeout=args.timeout)
+        rows = filter_corporate_actions(
+            rows,
+            code=args.code,
+            start=start,
+            end=end,
+            kind=args.kind,
+        )
+        if args.output:
+            destination = write_corporate_actions_csv(rows, args.output)
+            payload = {"path": str(destination), "rows": len(rows)}
+        else:
+            payload = {
+                "rows": len(rows),
+                "data": [_corporate_action_payload(item) for item in rows],
+            }
         print(json.dumps(payload, ensure_ascii=False))
         return
 

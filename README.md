@@ -287,6 +287,7 @@ tw-market search-company 台積
 tw-market quote 2330.TW
 tw-market valuation 2330.TW
 tw-market overview 2330.TW
+tw-market corporate-actions --market TWSE --code 2330 --output market-data/corporate-actions.csv
 tw-market market-snapshot --summary-only
 tw-market market-snapshot --output market-data/taiwan-equities.csv
 tw-market history 2330.TW --start 2026-01-01 --end 2026-08-11
