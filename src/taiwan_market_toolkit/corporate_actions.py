@@ -111,6 +111,13 @@ def _optional_decimal(value: Any) -> Decimal | None:
         raise ValueError(f"invalid corporate-action numeric value: {value!r}") from exc
 
 
+def _optional_tpex_subscription_price(value: Any) -> Decimal | None:
+    # TPEx uses this note marker when the cash-capital-increase price is pending.
+    if _clean_text(value) == "註4":
+        return None
+    return _optional_decimal(value)
+
+
 def _optional_int(value: Any) -> int | None:
     number = _optional_decimal(value)
     if number is None:
@@ -210,7 +217,7 @@ def parse_tpex_corporate_actions(payload: str | bytes) -> list[CorporateAction]:
                 subscription_ratio=_optional_decimal(
                     row.get("SubscriptionRatioToNewSharesIssued")
                 ),
-                subscription_price_per_share=_optional_decimal(
+                subscription_price_per_share=_optional_tpex_subscription_price(
                     row.get("SubscriptionPricePerShare")
                 ),
                 cash_dividend_per_share=_optional_decimal(row.get("CashDividend")),
