@@ -59,3 +59,4 @@ All notable changes to this project will be documented here.
 - GitHub Actions CI now uses Node 24-compatible `checkout` and `setup-python` actions.
 - Package metadata now includes repository, issue tracker, and changelog URLs for public distribution.
 - Historical TPEx normalization is deliberately scoped to four-digit common equities so non-equity trading-unit conventions are not guessed.
+- Closing-quote fetches retry once after a truncated HTTP response so transient `IncompleteRead` transport failures do not immediately fail callers or official-source probes.

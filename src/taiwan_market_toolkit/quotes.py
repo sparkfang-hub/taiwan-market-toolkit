@@ -14,6 +14,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from http.client import IncompleteRead
 from typing import Any
 from urllib.request import Request, urlopen
 
@@ -132,15 +133,21 @@ def parse_tpex_closing_quotes(payload: str | bytes) -> list[ClosingQuote]:
 
 
 def _fetch_payload(url: str, *, timeout: float) -> bytes:
-    request = Request(
-        url,
-        headers={
-            "Accept": "application/json",
-            "User-Agent": "taiwan-market-toolkit/0.1",
-        },
-    )
-    with urlopen(request, timeout=timeout) as response:  # noqa: S310
-        return response.read()
+    for attempt in range(2):
+        request = Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "taiwan-market-toolkit/0.1",
+            },
+        )
+        try:
+            with urlopen(request, timeout=timeout) as response:  # noqa: S310
+                return response.read()
+        except IncompleteRead:
+            if attempt == 1:
+                raise
+    raise RuntimeError("unreachable")
 
 
 def fetch_twse_closing_payload(*, timeout: float = 10.0) -> bytes:
