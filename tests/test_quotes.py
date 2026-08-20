@@ -1,11 +1,13 @@
 from datetime import date
 from decimal import Decimal
+from http.client import IncompleteRead
 
 import pytest
 
 from taiwan_market_toolkit import ClosingQuote, Market
 from taiwan_market_toolkit.quotes import (
     fetch_closing_quote,
+    fetch_tpex_closing_payload,
     parse_tpex_closing_quotes,
     parse_twse_closing_quotes,
 )
@@ -39,6 +41,23 @@ TPEX_FIXTURE = """[
 ]"""
 
 
+class _FakeResponse:
+    def __init__(self, *, payload: bytes = b"", error: Exception | None = None):
+        self.payload = payload
+        self.error = error
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        return False
+
+    def read(self) -> bytes:
+        if self.error is not None:
+            raise self.error
+        return self.payload
+
+
 def test_parse_twse_closing_quotes():
     quotes = parse_twse_closing_quotes(TWSE_FIXTURE)
 
@@ -59,6 +78,27 @@ def test_parse_tpex_closing_quotes_supports_roc_dates():
     assert quotes[0].date == date(2026, 8, 11)
     assert quotes[0].code == "6488"
     assert quotes[0].close == Decimal("350.5")
+
+
+def test_tpex_closing_payload_retries_truncated_http_body(monkeypatch):
+    responses = iter(
+        [
+            _FakeResponse(error=IncompleteRead(b"partial", 10)),
+            _FakeResponse(payload=b"[]"),
+        ]
+    )
+    calls = 0
+
+    def fake_urlopen(request, *, timeout):
+        nonlocal calls
+        calls += 1
+        assert timeout == 2.0
+        return next(responses)
+
+    monkeypatch.setattr("taiwan_market_toolkit.quotes.urlopen", fake_urlopen)
+
+    assert fetch_tpex_closing_payload(timeout=2.0) == b"[]"
+    assert calls == 2
 
 
 def test_fetch_closing_quote_dispatches_by_suffix(monkeypatch):
